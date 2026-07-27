@@ -93,7 +93,7 @@ model User {
   fullName            String     @map("full_name")
   phone               String?
   avatarUrl           String?    @map("avatar_url")
-  role                UserRole
+  role                UserRole   @default(TOURIST)
   status              UserStatus @default(ACTIVE)
   emailVerificationAt DateTime?  @map("email_verification_at")
   lastLoginAt         DateTime?  @map("last_login_at")
