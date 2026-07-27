@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { UserRole } from 'generated/prisma';
+import { UserRole } from '@prisma/client';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
