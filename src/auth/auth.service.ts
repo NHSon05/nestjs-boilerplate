@@ -34,11 +34,16 @@ export class AuthService {
       throw new BadRequestException('Mật khẩu xác nhận không khớp');
     }
 
+    const phone = dto.phone.trim();
     const email = dto.email.trim().toLowerCase();
 
-    const existingUser = await this.usersService.findByEmail(email);
+    const existingPhone = await this.usersService.findByPhone(phone);
+    if (existingPhone) {
+      throw new ConflictException('Số điện thoại đã được sử dụng');
+    }
 
-    if (existingUser) {
+    const existingEmail = await this.usersService.findByEmail(email);
+    if (existingEmail) {
       throw new ConflictException('Email đã được sử dụng');
     }
 
@@ -49,6 +54,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, saltRounds);
 
     const user = await this.usersService.create({
+      phone,
       email,
       fullName: dto.fullName.trim(),
       passwordHash,
@@ -64,11 +70,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.usersService.findByEmail(email);
+    const phone = dto.phone.trim();
+    const user = await this.usersService.findByPhone(phone);
 
     if (!user) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
+      throw new UnauthorizedException(
+        'Số điện thoại hoặc mật khẩu không chính xác',
+      );
     }
 
     if (user.status !== 'ACTIVE') {
@@ -79,7 +87,9 @@ export class AuthService {
       user.passwordHash,
     );
     if (!passwordMatched) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
+      throw new UnauthorizedException(
+        'Số điện thoại hoặc mật khẩu không chính xác',
+      );
     }
     const tokens = await this.createSessionAndTokens(user);
 

@@ -6,6 +6,14 @@ import { PrismaService } from 'src/database/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  findByPhone(phone: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        phone: phone.trim(),
+      },
+    });
+  }
+
   findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: {
@@ -13,12 +21,15 @@ export class UsersService {
       },
     });
   }
+
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
     });
   }
+
   create(data: {
+    phone: string;
     email: string;
     fullName: string;
     passwordHash: string;
@@ -26,6 +37,7 @@ export class UsersService {
   }) {
     return this.prisma.user.create({
       data: {
+        phone: data.phone.trim(),
         email: data.email.toLowerCase(),
         fullName: data.fullName,
         passwordHash: data.passwordHash,
