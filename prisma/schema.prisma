@@ -12,6 +12,19 @@ enum UserRole {
   ADMIN
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum LanguageProficiency {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+  NATIVE
+}
+
 enum UserStatus {
   ACTIVE
   SUSPENDED
@@ -90,6 +103,8 @@ model User {
   email               String     @unique
   passwordHash        String     @map("password_hash")
   fullName            String     @map("full_name")
+  gender              Gender?
+  dateOfBirth         DateTime?  @map("date_of_birth")
   phone               String?
   avatarUrl           String?    @map("avatar_url")
   role                UserRole   @default(TOURIST)
@@ -112,9 +127,9 @@ model User {
   locationHistory   UserLocationHistory[]
   notifications     Notification[]
 
-  createdAt DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime  @updatedAt @db.Timestamptz(6) @map("updated_at")
-  deletedAt DateTime? @db.Timestamptz(6) @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@index([role, status])
   @@map("users")
@@ -122,16 +137,16 @@ model User {
 
 model RefreshSession {
   id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid @map("user_id")
+  userId     String    @map("user_id") @db.Uuid
   tokenHash  String    @unique @map("token_hash")
-  familyId   String    @db.Uuid @map("family_id")
+  familyId   String    @map("family_id") @db.Uuid
   deviceName String?   @map("device_name")
   ipAddress  String?   @map("ip_address")
   userAgent  String?   @map("user_agent")
-  expriesAt  DateTime  @db.Timestamptz(6) @map("expires_at")
-  lastUsedAt DateTime? @db.Timestamptz(6) @map("last_used_at")
-  revokedAt  DateTime? @db.Timestamptz(6) @map("revoked_at")
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
+  expriesAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -139,67 +154,100 @@ model RefreshSession {
 }
 
 model GuideProfile {
-  userId             String                  @id @db.Uuid @map("user_id")
-  bio                String?
-  yearsExperience    Int                     @default(0) @map("years_experience")
-  hourlyRate         Decimal?                @db.Decimal(12, 0) @map("hourly_rate")
+  userId          String   @id @map("user_id") @db.Uuid
+  bio             String?
+  yearsExperience Int      @default(0) @map("years_experience")
+  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(12, 0)
+  city            String?
+
+  country            String?
   currency           String                  @default("VND") @db.Char(3)
   isAvailable        Boolean                 @default(false) @map("is_available")
   verificationStatus GuideVerificationStatus @default(UNVERIFIED) @map("verification_status")
-  averageRating      Decimal                 @default(0) @db.Decimal(3, 2) @map("average_rating")
+  averageRating      Decimal                 @default(0) @map("average_rating") @db.Decimal(3, 2)
   reviewCount        Int                     @default(0) @map("review_count")
+
+  languages GuideLanguage[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([isAvailable, verificationStatus])
+  @@index([city])
+  @@index([isAvailable])
+  @@index([averageRating])
   @@map("guide_profiles")
 }
 
 model TouristProfile {
-  userId            String  @id @db.Uuid @map("user_id")
-  preferredLanguage String? @map("preferred_language")
+  userId            String   @id @map("user_id") @db.Uuid
+  preferredLanguage String?  @map("preferred_language")
   nationality       String?
-  travelPreferences Json?   @map("travel_preferences")
+  interests         String[]
+  travelPreferences Json?    @map("travel_preferences")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("tourist_profiles")
 }
 
+model Language {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique
+
+  name String @unique
+
+  guides GuideLanguage[]
+
+  @@map("languages")
+}
+
+model GuideLanguage {
+  guideId          String              @map("guide_id") @db.Uuid
+  languageId       String              @map("language_id") @db.Uuid
+  proficiencyLevel LanguageProficiency @map("proficiency_level")
+  guide            GuideProfile        @relation(fields: [guideId], references: [userId], onDelete: Cascade)
+
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@id([guideId, languageId])
+  @@index([languageId])
+  @@map("guide_languages")
+}
+
 model GuideRequest {
-  id                String             @id @default(uuid()) @db.Uuid
-  touristId         String             @db.Uuid @map("tourist_id")
-  guideId           String             @db.Uuid @map("guide_id")
-  title             String
-  description       String?
-  status            GuideRequestStatus @default(PENDING)
-  startAt           DateTime           @db.Timestamptz(6) @map("start_at")
-  endAt             DateTime           @db.Timestamptz(6) @map("end_at")
-  meetingAddress    String?            @map("meeting_address")
-  meetingLatitude   Decimal?           @db.Decimal(9, 6) @map("meeting_latitude")
-  meetingLongtitude Decimal?           @db.Decimal(9, 6) @map("meeting_longitude")
-  proposedPrice     Decimal?           @db.Decimal(12, 0) @map("proposed_price")
-  currency          String             @default("VND") @db.Char(3)
-  acceptedAt        DateTime?          @db.Timestamptz(6) @map("accepted_at")
-  rejectedAt        DateTime?          @db.Timestamptz(6) @map("rejected_at")
-  cancelledAt       DateTime?          @db.Timestamptz(6) @map("cancelled_at")
-  completedAt       DateTime?          @db.Timestamptz(6) @map("completed_at")
+  id                 String             @id @default(uuid()) @db.Uuid
+  touristId          String             @map("tourist_id") @db.Uuid
+  guideId            String             @map("guide_id") @db.Uuid
+  title              String
+  description        String?
+  status             GuideRequestStatus @default(PENDING)
+  startAt            DateTime           @map("start_at") @db.Timestamptz(6)
+  endAt              DateTime           @map("end_at") @db.Timestamptz(6)
+  meetingAddress     String?            @map("meeting_address")
+  meetingLatitude    Decimal?           @map("meeting_latitude") @db.Decimal(9, 6)
+  meetingLongtitude  Decimal?           @map("meeting_longitude") @db.Decimal(9, 6)
+  proposedPrice      Decimal?           @map("proposed_price") @db.Decimal(12, 0)
+  currency           String             @default("VND") @db.Char(3)
+  acceptedAt         DateTime?          @map("accepted_at") @db.Timestamptz(6)
+  rejectedAt         DateTime?          @map("rejected_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  completedAt        DateTime?          @map("completed_at") @db.Timestamptz(6)
   cancellationReason String?            @map("cancellation_reason")
-  version           Int                @default(1)
+  version            Int                @default(1)
 
   tourist User @relation("TouristRequest", fields: [touristId], references: [id])
   guide   User @relation("GuideRequest", fields: [guideId], references: [id])
 
   conversation Conversation?
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([guideId, status, createdAt])
   @@index([touristId, status, createdAt])
@@ -209,32 +257,32 @@ model GuideRequest {
 
 model Conversation {
   id             String           @id @default(uuid()) @db.Uuid
-  guideRequestId String?          @unique @db.Uuid @map("guide_request_id")
+  guideRequestId String?          @unique @map("guide_request_id") @db.Uuid
   type           ConversationType @default(GUIDE_REQUEST)
-  lastMessageAt  DateTime?        @db.Timestamptz(6) @map("last_message_at")
+  lastMessageAt  DateTime?        @map("last_message_at") @db.Timestamptz(6)
 
   guideRequest GuideRequest? @relation(fields: [guideRequestId], references: [id])
 
   members  ConversationMember[]
   messages Message[]
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([lastMessageAt])
   @@map("conversations")
 }
 
 model ConversationMember {
-  conversationId String @db.Uuid @map("conversation_id")
-  userId         String @db.Uuid @map("user_id")
+  conversationId String @map("conversation_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  joinedAt   DateTime  @default(now()) @db.Timestamptz(6) @map("joined_at")
-  leftAt     DateTime? @db.Timestamptz(6) @map("left_at")
-  lastReadAt DateTime? @db.Timestamptz(6) @map("last_read_at")
+  joinedAt   DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  leftAt     DateTime? @map("left_at") @db.Timestamptz(6)
+  lastReadAt DateTime? @map("last_read_at") @db.Timestamptz(6)
   isMuted    Boolean   @default(false) @map("is_muted")
 
   @@id([conversationId, userId])
@@ -244,13 +292,13 @@ model ConversationMember {
 
 model Message {
   id              String      @id @default(uuid()) @db.Uuid
-  conversationId  String      @db.Uuid @map("conversation_id")
-  senderId        String      @db.Uuid @map("sender_id")
+  conversationId  String      @map("conversation_id") @db.Uuid
+  senderId        String      @map("sender_id") @db.Uuid
   clientMessageId String?     @map("client_message_id")
   type            MessageType @default(TEXT)
   content         String
   metadata        Json?
-  replyToId       String?     @db.Uuid @map("reply_to_id")
+  replyToId       String?     @map("reply_to_id") @db.Uuid
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id])
@@ -258,9 +306,9 @@ model Message {
 
   replies Message[] @relation("MessageReplies")
 
-  sentAt    DateTime  @default(now()) @db.Timestamptz(6) @map("sent_at")
-  editedAt  DateTime? @db.Timestamptz(6) @map("edited_at")
-  deletedAt DateTime? @db.Timestamptz(6) @map("deleted_at")
+  sentAt    DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
+  editedAt  DateTime? @map("edited_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@unique([senderId, clientMessageId])
   @@index([conversationId, sentAt])
@@ -269,17 +317,17 @@ model Message {
 
 model Review {
   id             String  @id @default(uuid()) @db.Uuid
-  guideRequestId String  @db.Uuid @map("guide_request_id")
-  reviewerId     String  @db.Uuid @map("reviewer_id")
-  revieweeId     String  @db.Uuid @map("reviewee_id")
+  guideRequestId String  @map("guide_request_id") @db.Uuid
+  reviewerId     String  @map("reviewer_id") @db.Uuid
+  revieweeId     String  @map("reviewee_id") @db.Uuid
   rating         Int
   comment        String?
 
   reviewer User @relation("ReviewsGiven", fields: [reviewerId], references: [id])
   reviewee User @relation("ReviewsReceived", fields: [revieweeId], references: [id])
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([guideRequestId, reviewerId])
   @@index([revieweeId, createdAt])
@@ -287,14 +335,14 @@ model Review {
 }
 
 model UserCurrentLocation {
-  userId         String         @id @db.Uuid @map("user_id")
+  userId         String         @id @map("user_id") @db.Uuid
   latitude       Decimal        @db.Decimal(9, 6)
-  longtitude     Decimal        @db.Decimal(9, 6) @map("longitude")
+  longtitude     Decimal        @map("longitude") @db.Decimal(9, 6)
   accuracyMeters Float?         @map("accuracy_meters")
   source         LocationSource
-  capturedAt     DateTime       @db.Timestamptz(6) @map("captured_at")
-  updatedAt      DateTime       @updatedAt @db.Timestamptz(6) @map("updated_at")
-  expiresAt      DateTime?      @db.Timestamptz(6) @map("expires_at")
+  capturedAt     DateTime       @map("captured_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  expiresAt      DateTime?      @map("expires_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -304,13 +352,13 @@ model UserCurrentLocation {
 
 model UserLocationHistory {
   id             BigInt         @id @default(autoincrement())
-  userId         String         @db.Uuid @map("user_id")
+  userId         String         @map("user_id") @db.Uuid
   latitude       Decimal        @db.Decimal(9, 6)
-  longitude      Decimal        @db.Decimal(9, 6) @map("longitude")
+  longitude      Decimal        @map("longitude") @db.Decimal(9, 6)
   accuracyMeters Float?         @map("accuracy_meters")
   source         LocationSource
-  capturedAt     DateTime       @db.Timestamptz(6) @map("captured_at")
-  createdAt      DateTime       @default(now()) @db.Timestamptz(6) @map("created_at")
+  capturedAt     DateTime       @map("captured_at") @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -320,16 +368,16 @@ model UserLocationHistory {
 
 model Notification {
   id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @db.Uuid @map("user_id")
+  userId      String              @map("user_id") @db.Uuid
   type        NotificationType
   channel     NotificationChannel
   title       String
   body        String
   data        Json?
   status      NotificationStatus  @default(PENDING)
-  readAt      DateTime?           @db.Timestamptz(6) @map("read_at")
-  deliveredAt DateTime?           @db.Timestamptz(6) @map("delivered_at")
-  createdAt   DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  readAt      DateTime?           @map("read_at") @db.Timestamptz(6)
+  deliveredAt DateTime?           @map("delivered_at") @db.Timestamptz(6)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -339,19 +387,19 @@ model Notification {
 
 model AiConversation {
   id            String               @id @default(uuid()) @db.Uuid
-  userId        String               @db.Uuid @map("user_id")
+  userId        String               @map("user_id") @db.Uuid
   title         String?
   status        AiConversationStatus @default(ACTIVE)
   provider      String               @default("gemini")
   model         String?
-  lastMessageAt DateTime?            @db.Timestamptz(6) @map("last_message_at")
+  lastMessageAt DateTime?            @map("last_message_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   messages AiMessage[]
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([userId, updatedAt])
   @@map("ai_conversations")
@@ -359,7 +407,7 @@ model AiConversation {
 
 model AiMessage {
   id               String        @id @default(uuid()) @db.Uuid
-  conversationId   String        @db.Uuid @map("conversation_id")
+  conversationId   String        @map("conversation_id") @db.Uuid
   role             AiMessageRole
   content          String
   model            String?
@@ -369,7 +417,7 @@ model AiMessage {
 
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([conversationId, createdAt])
   @@map("ai_messages")
