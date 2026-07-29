@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 
@@ -11,13 +11,21 @@ export class UsersService {
       where: {
         phone: phone.trim(),
       },
+      include: {
+        guideProfile: true,
+        touristProfile: true,
+      },
     });
   }
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: {
-        email: email.toLowerCase(),
+        email: email.trim().toLowerCase(),
+      },
+      include: {
+        guideProfile: true,
+        touristProfile: true,
       },
     });
   }
@@ -25,7 +33,34 @@ export class UsersService {
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
+      include: {
+        guideProfile: true,
+        touristProfile: true,
+      },
     });
+  }
+
+  async getProfile(userId: string) {
+    let user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    // Tự động tạo bù Profile nếu tài khoản chưa có profile tương ứng trong DB
+    if (user.role === UserRole.TOURIST && !user.touristProfile) {
+      await this.prisma.touristProfile.create({
+        data: { userId: user.id },
+      });
+      user = await this.findById(userId);
+    } else if (user.role === UserRole.GUIDE && !user.guideProfile) {
+      await this.prisma.guideProfile.create({
+        data: { userId: user.id },
+      });
+      user = await this.findById(userId);
+    }
+
+    return this.sanitizeUser(user!);
   }
 
   create(data: {
@@ -35,14 +70,38 @@ export class UsersService {
     passwordHash: string;
     role?: UserRole;
   }) {
+    const role = data.role ?? UserRole.TOURIST;
     return this.prisma.user.create({
       data: {
         phone: data.phone.trim(),
         email: data.email.toLowerCase(),
         fullName: data.fullName,
         passwordHash: data.passwordHash,
-        role: data.role,
+        role: role,
+
+        guideProfile:
+          role === UserRole.GUIDE
+            ? {
+                create: {},
+              }
+            : undefined,
+        touristProfile:
+          role === UserRole.TOURIST
+            ? {
+                create: {},
+              }
+            : undefined,
+      },
+      include: {
+        guideProfile: true,
+        touristProfile: true,
       },
     });
+  }
+
+  private sanitizeUser<T extends { passwordHash?: string }>(user: T) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _, ...safeUser } = user;
+    return safeUser;
   }
 }

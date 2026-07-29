@@ -199,15 +199,15 @@ export class AuthService {
     };
   }
 
-  async me(userId: string) {
-    const user = await this.usersService.findById(userId);
+  // async me(userId: string) {
+  //   const user = await this.usersService.findById(userId);
 
-    if (!user) {
-      throw new UnauthorizedException('Người dùng không tồn tại');
-    }
+  //   if (!user) {
+  //     throw new UnauthorizedException('Người dùng không tồn tại');
+  //   }
 
-    return this.sanitizeUser(user);
-  }
+  //   return this.sanitizeUser(user);
+  // }
 
   private async createSessionAndTokens(user: {
     id: string;
@@ -288,7 +288,12 @@ export class AuthService {
 
     return expiresAt;
   }
-  private sanitizeUser<T extends { passwordHash?: string }>(user: T) {
+
+  private sanitizeUser<
+    T extends {
+      passwordHash?: string;
+    },
+  >(user: T) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash: _, ...safeUser } = user;
     return safeUser;
