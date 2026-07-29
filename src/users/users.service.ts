@@ -1,7 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+
+const userIncludeOptions = {
+  guideProfile: {
+    include: {
+      languages: {
+        include: {
+          language: true,
+        },
+      },
+    },
+  },
+  touristProfile: true,
+};
 
 @Injectable()
 export class UsersService {
@@ -12,10 +25,7 @@ export class UsersService {
       where: {
         phone: phone.trim(),
       },
-      include: {
-        guideProfile: true,
-        touristProfile: true,
-      },
+      include: userIncludeOptions,
     });
   }
 
@@ -24,20 +34,14 @@ export class UsersService {
       where: {
         email: email.trim().toLowerCase(),
       },
-      include: {
-        guideProfile: true,
-        touristProfile: true,
-      },
+      include: userIncludeOptions,
     });
   }
 
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: {
-        guideProfile: true,
-        touristProfile: true,
-      },
+      include: userIncludeOptions,
     });
   }
 
@@ -71,20 +75,24 @@ export class UsersService {
       throw new NotFoundException('Người dùng không tồn tại');
     }
 
+    const dataToUpdate: Prisma.UserUpdateInput = {};
+
+    if (dto.fullName !== undefined) {
+      dataToUpdate.fullName = dto.fullName.trim();
+    }
+    if (dto.gender !== undefined) {
+      dataToUpdate.gender = dto.gender;
+    }
+    if (dto.dateOfBirth !== undefined) {
+      dataToUpdate.dateOfBirth = dto.dateOfBirth
+        ? new Date(dto.dateOfBirth)
+        : null;
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(dto.fullName !== undefined && { fullName: dto.fullName.trim() }),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        ...(dto.gender !== undefined && { gender: dto.gender }),
-        ...(dto.dateOfBirth !== undefined && {
-          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-        }),
-      },
-      include: {
-        guideProfile: true,
-        touristProfile: true,
-      },
+      data: dataToUpdate,
+      include: userIncludeOptions,
     });
 
     return this.sanitizeUser(updatedUser);
@@ -119,10 +127,7 @@ export class UsersService {
               }
             : undefined,
       },
-      include: {
-        guideProfile: true,
-        touristProfile: true,
-      },
+      include: userIncludeOptions,
     });
   }
 

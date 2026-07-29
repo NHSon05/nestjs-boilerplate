@@ -32,20 +32,20 @@ export interface TouristProfile {
 }
 
 export interface GuideProfile {
-  userId: string;
+  userId?: string;
   bio?: string | null;
-  yearsExperience: number;
+  yearsExperience?: number;
   hourlyRate?: number | string | null;
   city?: string | null;
   country?: string | null;
-  currency: string;
-  isAvailable: boolean;
-  verificationStatus: GuideVerificationStatus;
-  averageRating: number | string;
-  reviewCount: number;
+  currency?: string;
+  isAvailable?: boolean;
+  verificationStatus?: GuideVerificationStatus;
+  averageRating?: number | string;
+  reviewCount?: number;
   languages?: any[];
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface UserWithProfiles extends User {

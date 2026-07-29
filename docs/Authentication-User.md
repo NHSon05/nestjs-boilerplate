@@ -1,248 +1,257 @@
-# Tài Liệu Đặc Tả Thiết Kế: User & Authentication Modules
+# Authentication & User API Documentation
 
-Tài liệu này đặc tả chi tiết về cấu trúc thư mục, chức năng, danh sách API, luồng xử lý (flows), các bộ bảo vệ (guards), bộ lọc (filters) và kiểm thử cho hai Module cốt lõi: **User** và **Authentication**.
-
----
-
-## 1. User Module
-
-Module này quản lý thông tin tài khoản người dùng, cập nhật hồ sơ cá nhân và ảnh đại diện.
-
-### Chức năng chính
-
-- **CRUD User:** Tạo, đọc, cập nhật và xóa thông tin người dùng.
-- **Get Current User:** Lấy thông tin chi tiết của người dùng đang đăng nhập.
-- **Update Profile:** Cập nhật thông tin cơ bản (họ tên, số điện thoại...).
-- **Upload Avatar:** Tải lên và cập nhật ảnh đại diện của người dùng.
-- **Soft Delete:** Xóa mềm người dùng (chỉ đánh dấu `deletedAt`, không xóa cứng khỏi DB).
-- **Admin Management:** Các quyền quản trị để quản lý toàn bộ danh sách người dùng.
-
-### Danh Sách API Endpoint
-
-| HTTP Method | Endpoint                  | Access Control       | Mô tả                                    |
-| :---------- | :------------------------ | :------------------- | :--------------------------------------- |
-| `GET`       | `/api/v1/users/me`        | Người dùng đăng nhập | Lấy thông tin cá nhân hiện tại           |
-| `PATCH`     | `/api/v1/users/me`        | Người dùng đăng nhập | Cập nhật thông tin cá nhân               |
-| `PATCH`     | `/api/v1/users/me/avatar` | Người dùng đăng nhập | Upload và cập nhật ảnh đại diện          |
-| `GET`       | `/api/v1/users/:id`       | Quyền ADMIN          | Lấy chi tiết thông tin một User cụ thể   |
-| `GET`       | `/api/v1/users`           | Quyền ADMIN          | Lấy danh sách toàn bộ User (phân trang)  |
-| `PATCH`     | `/api/v1/users/:id`       | Quyền ADMIN          | Admin cập nhật thông tin bất kỳ User nào |
-| `DELETE`    | `/api/v1/users/:id`       | Quyền ADMIN          | Admin thực hiện xóa mềm User             |
-
-### Các Lớp Cấu Trúc (Core Classes)
-
-#### Data Transfer Objects (DTOs)
-
-- `CreateUserDto`: Dữ liệu đầu vào để tạo tài khoản mới.
-- `UpdateProfileDto`: Dữ liệu cho phép người dùng cập nhật thông tin cá nhân.
-- `UpdateAvatarDto`: Dữ liệu xác thực file ảnh tải lên.
-- `UpdateUserByAdminDto`: Cấu trúc dữ liệu dành riêng cho Admin để phân vai trò (Role) hoặc trạng thái (Status).
-
-#### Các hàm trong `UsersService`
-
-- `create()`: Thêm mới người dùng.
-- `findById()`: Tìm kiếm người dùng dựa trên ID (UUID).
-- `findByEmail()`: Tìm kiếm người dùng bằng địa chỉ Email.
-- `updateProfile()`: Cập nhật thông tin cá nhân của người dùng hiện tại.
-- `updateAvatar()`: Lưu đường dẫn ảnh đại diện mới sau khi upload thành công.
-- `softDelete()`: Đánh dấu xóa mềm người dùng.
-
-#### Cấu trúc truy cập cơ sở dữ liệu
-
-- `UserRepository`: Lớp Repository đóng gói các truy vấn Prisma liên quan đến bảng `users`.
+Tài liệu đặc tả chi tiết các API thuộc Module **Authentication** và **Users**.
 
 ---
 
-## 2. Authentication Module
+## 1. Authentication Module (`/auth`)
 
-Module này chịu trách nhiệm xác thực danh tính, quản lý phiên đăng nhập và bảo mật các API được bảo vệ.
+### 1.1 Đăng ký tài khoản (`POST /auth/register`)
 
-### Luồng Đăng ký & Xác thực (Register & Verification)
+- **HTTP Method:** `POST`
+- **Endpoint:** `/api/v1/auth/register`
+- **Access Control:** Public (Không yêu cầu Token)
 
-#### Đăng ký tài khoản mới (`POST /api/v1/auth/register`)
+#### Request Headers
 
-**Request Body:**
+```http
+Content-Type: application/json
+```
+
+#### Request Body
 
 ```json
 {
-  "email": "test@gmail.com",
-  "password": "password123",
-  "fullName": "Nguyen Son"
+  "fullName": "Nguyễn Văn A",
+  "phone": "0987654321",
+  "email": "nguyenvana@gmail.com",
+  "password": "Password123@",
+  "confirmPassword": "Password123@",
+  "role": "TOURIST"
 }
 ```
 
-```mermaid
-graph TD
-    Start([Bắt đầu]) --> Validate[1. Validate định dạng Email & Password]
-    Validate --> Hash[2. Mã hóa mật khẩu bằng Argon2]
-    Hash --> Create[3. Tạo bản ghi User mới trong Database]
-    Create --> Token[4. Tạo mã xác thực Email Verification Token]
-    Token --> Mail[5. Gửi Email chứa link xác thực qua MailModule]
-    Mail --> End([Trả về Access Token & Thông tin User])
-```
+> _Lưu ý:_ `role` nhận các giá trị: `"TOURIST"`, `"GUIDE"`. Mặc định là `"TOURIST"`.
 
-#### Các API hỗ trợ Xác thực Email:
-
-- `POST /api/v1/auth/verify-email`: Xác nhận tài khoản dựa vào token nhận từ email.
-- `POST /api/v1/auth/resend-verification`: Gửi lại email kích hoạt tài khoản.
-
----
-
-### Luồng Đăng nhập & Làm mới Token (Login & Token Rotation)
-
-#### Đăng nhập (`POST /api/v1/auth/login`)
-
-**Request Body:**
+#### Response Success (201 Created)
 
 ```json
 {
-  "email": "test@gmail.com",
-  "password": "password123"
+  "user": {
+    "id": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+    "fullName": "Nguyễn Văn A",
+    "phone": "0987654321",
+    "email": "nguyenvana@gmail.com",
+    "avatarUrl": null,
+    "gender": null,
+    "dateOfBirth": null,
+    "role": "TOURIST",
+    "status": "ACTIVE",
+    "touristProfile": {
+      "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+      "preferredLanguage": null,
+      "nationality": null,
+      "interests": [],
+      "travelPreferences": null
+    },
+    "guideProfile": null,
+    "createdAt": "2026-07-29T10:00:00.000Z",
+    "updatedAt": "2026-07-29T10:00:00.000Z"
+  },
+  "accessToken": "eyJhbGciOi...",
+  "refreshToken": "eyJhbGciOi..."
 }
 ```
 
-```mermaid
-graph TD
-    Start([Bắt đầu]) --> Find[1. Tìm User theo Email trong DB]
-    Find --> Compare[2. So khớp mật khẩu đã hash bằng Argon2]
-    Compare --> CheckVerify{3. Đã kích hoạt Email chưa?}
-    CheckVerify -- Chưa --> Error[Ném lỗi Unauthorized 401]
-    CheckVerify -- Rồi --> GenJWT[4. Tạo Access Token ngắn hạn & Refresh Token]
-    GenJWT --> SaveSession[5. Lưu phiên đăng nhập vào bảng RefreshSession]
-    SaveSession --> End([Trả về Access & Refresh Tokens])
+---
+
+### 1.2 Đăng nhập (`POST /auth/login`)
+
+- **HTTP Method:** `POST`
+- **Endpoint:** `/api/v1/auth/login`
+- **Access Control:** Public (Không yêu cầu Token)
+
+#### Request Body
+
+```json
+{
+  "phone": "0987654321",
+  "password": "Password123@"
+}
 ```
 
-#### Làm mới Token (`POST /api/v1/auth/refresh`)
+#### Response Success (200 OK)
 
-- **Luồng xử lý:** Kiểm tra tính hợp lệ của Refresh Token hiện tại → Tìm phiên đăng nhập tương ứng → Tạo cặp token mới (**Refresh Token Rotation** - tự động vô hiệu hóa token cũ) → Lưu và trả về cặp token mới cho Client.
-
-#### Đăng xuất (`POST /api/v1/auth/logout`)
-
-- **Luồng xử lý:** Xóa bản ghi `RefreshSession` tương ứng trong cơ sở dữ liệu để vô hiệu hóa phiên làm việc của Client.
-
----
-
-### Quản Lý Mật Khẩu (Password Management)
-
-- `POST /api/v1/auth/forgot-password`: Gửi mã reset mật khẩu vào email của người dùng.
-- `POST /api/v1/auth/reset-password`: Thay đổi mật khẩu mới sử dụng token được cấp qua email.
-- `POST /api/v1/auth/change-password`: Thay đổi mật khẩu dành cho người dùng đã đăng nhập.
-
----
-
-## 3. Kiến Trúc Bảo Mật & Phân Quyền (Security & Access Control)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant NestJS as NestJS Engine
-    participant Guard as JwtAuthGuard / RolesGuard
-    participant Strategy as Passport JwtStrategy
-    participant Controller as UserController
-
-    Client->>NestJS: GET /users/me (Bearer Token)
-    NestJS->>Guard: Kích hoạt Guards bảo vệ Route
-    Guard->>Strategy: Chuyển token để giải mã
-    alt Token hợp lệ
-        Strategy-->>Guard: Trả về Payload (userId, role)
-        Guard->>Guard: Kiểm tra quyền truy cập (Role)
-        alt Hợp lệ
-            Guard-->>Controller: Cho phép đi tiếp (Gán User vào request.user)
-            Controller-->>Client: Trả về 200 OK (Thông tin User)
-        else Thiếu quyền truy cập
-            Guard-->>Client: Trả về 403 Forbidden
-        end
-    else Token không hợp lệ
-        Strategy-->>Guard: Lỗi giải mã
-        Guard-->>Client: Trả về 401 Unauthorized
-    end
+```json
+{
+  "user": {
+    "id": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+    "fullName": "Nguyễn Văn A",
+    "phone": "0987654321",
+    "email": "nguyenvana@gmail.com",
+    "role": "TOURIST",
+    "status": "ACTIVE",
+    "touristProfile": {
+      "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+      "preferredLanguage": null,
+      "nationality": null,
+      "interests": [],
+      "travelPreferences": null
+    },
+    "guideProfile": null
+  },
+  "accessToken": "eyJhbGciOi...",
+  "refreshToken": "eyJhbGciOi..."
+}
 ```
 
-### Các Lớp Bảo Vệ & Phân Quyền
+#### Response Error (401 Unauthorized)
 
-- **Guards:**
-  - `JwtAuthGuard`: Chặn các request không đính kèm Access Token hợp lệ.
-  - `RefreshTokenGuard`: Dành riêng cho route `/auth/refresh` để xác thực Refresh Token.
-  - `RolesGuard`: Đối chiếu vai trò (`UserRole`) của người dùng với các quyền được thiết lập trên API.
-  - `OptionalAuthGuard`: Không bắt buộc đăng nhập, nhưng nếu có gửi Token thì vẫn phân giải thông tin User.
-- **Decorators:**
-  - `@CurrentUser()`: Trích xuất nhanh thông tin User từ `request.user`.
-  - `@CurrentUserId()`: Lấy trực tiếp `userId` của người đang đăng nhập.
-  - `@Public()`: Đánh dấu một route là công khai, bỏ qua kiểm tra đăng nhập.
-  - `@Roles(...)`: Gán các vai trò được phép truy cập route đó (ví dụ `@Roles(UserRole.ADMIN)`).
-- **Strategies:**
-  - `JwtStrategy`: Xác thực Access Token.
-  - `RefreshTokenStrategy`: Xác thực Refresh Token.
+```json
+{
+  "statusCode": 401,
+  "message": "Số điện thoại hoặc mật khẩu không chính xác",
+  "error": "Unauthorized"
+}
+```
 
 ---
 
-## 4. Các Module Bổ Trợ (Helper Modules)
+### 1.3 Làm mới Token (`POST /auth/refresh`)
 
-### Mail Module
+- **HTTP Method:** `POST`
+- **Endpoint:** `/api/v1/auth/refresh`
+- **Access Control:** Public (Truyền Refresh Token trong Body)
 
-Hỗ trợ gửi các mẫu email HTML chuyên nghiệp đến người dùng:
+#### Request Body
 
-- `sendVerifyEmail()`: Gửi đường dẫn kích hoạt tài khoản.
-- `sendForgotPassword()`: Gửi đường dẫn đặt lại mật khẩu mới.
-- `sendWelcomeEmail()`: Gửi email chào mừng khi tài khoản kích hoạt thành công.
+```json
+{
+  "refreshToken": "eyJhbGciOi..."
+}
+```
 
-### Storage Module
+#### Response Success (200 OK)
 
-Lớp dịch vụ cấu hình upload ảnh phục vụ cho toàn ứng dụng:
+```json
+{
+  "accessToken": "eyJhbGciOi...",
+  "refreshToken": "eyJhbGciOi..."
+}
+```
 
-- `uploadAvatar()`: Xử lý lưu trữ hình ảnh đại diện (hỗ trợ local hoặc Cloud S3).
+#### Response Error (401 Unauthorized)
 
----
-
-## 5. Cấu Trúc Dữ Liệu & Middleware (Prisma & System Utilities)
-
-### Bảng Cơ Sở Dữ Liệu (Prisma Models)
-
-> [!IMPORTANT]
-> Trong giai đoạn này chỉ triển khai và thao tác các bảng phục vụ xác thực người dùng. Chưa kích hoạt các bảng nghiệp vụ nâng cao.
-
-- **Bảng kích hoạt:** `User`, `RefreshSession`, `VerificationToken`, `PasswordResetToken`.
-- **Bảng trì hoãn (chưa dùng):** `GuideProfile`, `TouristProfile`, `Conversation`, `Message`, `GuideRequest`, `Review`.
-
-### Middlewares & Interceptors
-
-- **Middlewares:**
-  - `LoggerMiddleware`: Ghi lại method, url và IP của mọi request gửi tới.
-  - `RequestIdMiddleware`: Gắn mã ID duy nhất (`x-request-id`) vào mỗi request để dễ theo dõi log.
-- **Interceptors:**
-  - `TransformInterceptor`: Tự động chuẩn hóa định dạng JSON trả về (`{ success: true, data: [...] }`).
-  - `LoggingInterceptor`: Ghi nhận tổng thời gian từ lúc nhận request đến khi xử lý xong.
-- **Exception Filters:**
-  - `PrismaExceptionFilter`: Bắt các lỗi từ tầng database (như lỗi trùng unique) và trả về HTTP code tương ứng.
-  - `HttpExceptionFilter`: Đảm bảo tất cả các lỗi trả về client có chung một cấu trúc JSON thống nhất.
+```json
+{
+  "statusCode": 401,
+  "message": "Phiên đăng nhập đã hết hạn",
+  "error": "Unauthorized"
+}
+```
 
 ---
 
-## 6. Bảo Mật & Kiểm Thử (Security & Testing)
+### 1.4 Đăng xuất (`POST /auth/logout`)
 
-### Bảo mật Hệ thống
+- **HTTP Method:** `POST`
+- **Endpoint:** `/api/v1/auth/logout`
+- **Access Control:** Public (Truyền Refresh Token để thu hồi phiên)
 
-- **Helmet:** Tự động thiết lập các HTTP Header bảo vệ ứng dụng khỏi các cuộc tấn công phổ biến.
-- **Cors:** Chỉ cho phép các domain được cấu hình (FE) gửi request lên hệ thống.
-- **Rate Limit:** Giới hạn số lượng request được gửi từ một IP trong khoảng thời gian nhất định để tránh spam/DDoS.
-- **Argon2:** Giải pháp hash mật khẩu bảo mật hàng đầu.
-- **JWT Rotation:** Ngăn chặn việc chiếm đoạt và lạm dụng Refresh Token bằng cơ chế đổi mới liên tục.
+#### Request Body
 
-### Kế hoạch Kiểm thử (Testing)
+```json
+{
+  "refreshToken": "eyJhbGciOi..."
+}
+```
 
-- **Unit Test (Kiểm thử đơn vị):**
-  - `AuthService`: Kiểm tra tính chính xác của các tiến trình logic đăng nhập, đăng ký và cấp token.
-  - `UsersService`: Kiểm thử các thao tác tìm kiếm, cập nhật hồ sơ cá nhân và xóa mềm.
-- **E2E Test (Kiểm thử tích hợp từ đầu đến cuối):**
-  - Mô phỏng toàn bộ quy trình: Đăng ký tài khoản → Xác thực email → Đăng nhập thành công → Gọi API được bảo vệ bằng Access Token → Trải nghiệm hết hạn token → Sử dụng Refresh Token để làm mới → Đăng xuất và xóa phiên làm việc.
+#### Response Success (200 OK)
+
+```json
+{
+  "message": "Đăng xuất thành công"
+}
+```
 
 ---
 
-## Kết quả đạt được (Output)
+## 2. Users Module (`/users`)
 
-Sau khi hoàn thành phát triển module này:
+### 2.1 Lấy thông tin cá nhân hiện tại (`GET /users/me`)
 
-1.  Hệ thống backend đã sẵn sàng tích hợp đầy đủ cơ chế bảo mật và phân quyền vai trò (`ADMIN`, `GUIDE`, `TOURIST`).
-2.  Quản lý hồ sơ người dùng, phân phiên đăng nhập (Refresh Token Rotation) chạy ổn định và an toàn.
-3.  Tạo nền tảng kiến trúc vững chắc, có thể mở rộng các chức năng tiếp theo như Chat AI, đặt lịch GuideRequest, tạo cuộc hội thoại hay viết Review mà không cần tái cấu trúc lại phần Authentication.
+- **HTTP Method:** `GET`
+- **Endpoint:** `/api/v1/users/me`
+- **Access Control:** Authenticated User (`JwtAuthGuard`)
+
+#### Request Headers
+
+```http
+Authorization: Bearer <access_token>
+```
+
+#### Response Success (200 OK)
+
+```json
+{
+  "id": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+  "email": "nguyenvana@gmail.com",
+  "fullName": "Nguyễn Văn A",
+  "gender": "MALE",
+  "dateOfBirth": "1998-05-20T00:00:00.000Z",
+  "phone": "0987654321",
+  "avatarUrl": "https://example.com/avatar.jpg",
+  "role": "GUIDE",
+  "status": "ACTIVE",
+  "touristProfile": null,
+  "guideProfile": {
+    "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+    "bio": "Hướng dẫn viên nhiệt tình tại Đà Nẵng",
+    "yearsExperience": 3,
+    "hourlyRate": 250000,
+    "city": "Đà Nẵng",
+    "country": "Việt Nam",
+    "currency": "VND",
+    "isAvailable": true,
+    "verificationStatus": "UNVERIFIED",
+    "averageRating": "5.0",
+    "reviewCount": 12,
+    "languages": [
+      {
+        "guideId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+        "languageId": "e5b8a012-3456-7890-abcd-ef1234567890",
+        "proficiencyLevel": "NATIVE",
+        "language": {
+          "id": "e5b8a012-3456-7890-abcd-ef1234567890",
+          "code": "vi",
+          "name": "Tiếng Việt"
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2.2 Cập nhật thông tin cá nhân cơ bản (`PATCH /users/me`)
+
+- **HTTP Method:** `PATCH`
+- **Endpoint:** `/api/v1/users/me`
+- **Access Control:** Authenticated User (`JwtAuthGuard`)
+
+#### Request Body
+
+```json
+{
+  "fullName": "Nguyễn Văn B",
+  "gender": "MALE",
+  "dateOfBirth": "1999-12-25"
+}
+```
+
+> _Tất cả các trường đều là tùy chọn (`@IsOptional()`)._
+
+#### Response Success (200 OK)
+
+Trả về thông tin User đã được cập nhật kèm theo các profile tương ứng.
