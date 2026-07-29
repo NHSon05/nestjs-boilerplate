@@ -36,3 +36,29 @@ Không trả
 
 passwordHash
 refreshSessions
+
+### Chỉnh sửa hồ sơ
+
+`PATCH /tourists/profile`
+
+```json
+{
+  "nationality": "VN",
+  "preferredLanguage": "vi",
+  "interests": ["Food", "Photography", "Hiking"],
+  "travelPreferences": {
+    "budget": "medium",
+    "pace": "relaxed"
+  }
+}
+```
+
+`PATCH /guides/profile`
+
+### Toggle giữa tourist và guide
+
+`PATCH /users/me/role`
+
+### Upload avatar
+
+`PATCH /users/me/avatar`

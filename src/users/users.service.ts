@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -61,6 +62,32 @@ export class UsersService {
     }
 
     return this.sanitizeUser(user!);
+  }
+
+  async updateUser(userId: string, dto: UpdateUserDto) {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.fullName !== undefined && { fullName: dto.fullName.trim() }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        ...(dto.gender !== undefined && { gender: dto.gender }),
+        ...(dto.dateOfBirth !== undefined && {
+          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+        }),
+      },
+      include: {
+        guideProfile: true,
+        touristProfile: true,
+      },
+    });
+
+    return this.sanitizeUser(updatedUser);
   }
 
   create(data: {
