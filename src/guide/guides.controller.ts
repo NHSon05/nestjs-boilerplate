@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GuidesService } from './guides.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -24,6 +24,14 @@ export class GuidesController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Guide profile updated successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'User account does not have GUIDE role',
+  })
   updateProfile(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateGuideProfileDto,
@@ -34,6 +42,14 @@ export class GuidesController {
   @Get('me/languages')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of registered guide languages',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'User account does not have GUIDE role',
+  })
   getMyLanguages(@CurrentUser() user: AuthenticatedUser) {
     return this.guidesService.getMyLanguages(user.id);
   }
@@ -41,6 +57,18 @@ export class GuidesController {
   @Post('me/languages')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Guide language proficiency level updated',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Guide language successfully added',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Target language ID not found in system',
+  })
   addLanguage(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: AddGuideLanguageDto,
@@ -51,6 +79,15 @@ export class GuidesController {
   @Delete('me/languages/:languageId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiParam({ name: 'languageId', description: 'Language UUID to remove' })
+  @ApiResponse({
+    status: 200,
+    description: 'Language successfully removed from profile',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Language not found in guide profile',
+  })
   removeLanguage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('languageId') languageId: string,

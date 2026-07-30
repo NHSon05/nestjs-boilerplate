@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { SwitchRoleDto } from './dto/switch-role.dto';
 
 const userIncludeOptions = {
   guideProfile: {
@@ -96,6 +101,67 @@ export class UsersService {
     });
 
     return this.sanitizeUser(updatedUser);
+  }
+
+  async switchRole(userId: string, dto: SwitchRoleDto) {
+    if (dto.role !== UserRole.GUIDE && dto.role !== UserRole.TOURIST) {
+      throw new BadRequestException('Chỉ có thể chuyển giữa TOURIST và GUIDE');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          role: true,
+          guideProfile: {
+            select: { userId: true },
+          },
+          touristProfile: {
+            select: { userId: true },
+          },
+        },
+      });
+      if (!user) {
+        throw new NotFoundException('Người dùng không tồn tại');
+      }
+      if (user.role === dto.role) {
+        throw new BadRequestException(`Tài khoản đã ở chế độ ${dto.role}`);
+      }
+
+      if (dto.role === UserRole.GUIDE && !user.guideProfile) {
+        await tx.guideProfile.create({
+          data: {
+            userId,
+          },
+        });
+      }
+      if (dto.role === UserRole.TOURIST && !user.touristProfile) {
+        await tx.touristProfile.create({
+          data: {
+            userId,
+          },
+        });
+      }
+      return tx.user.update({
+        where: { id: userId },
+        data: {
+          role: dto.role,
+        },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          fullName: true,
+          gender: true,
+          dateOfBirth: true,
+          avatarUrl: true,
+          role: true,
+          status: true,
+          guideProfile: true,
+          touristProfile: true,
+        },
+      });
+    });
   }
 
   create(data: {

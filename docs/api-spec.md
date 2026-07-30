@@ -1,6 +1,6 @@
-# Authentication & User API Documentation
+# API Specification Documentation
 
-Tài liệu đặc tả chi tiết các API thuộc Module **Authentication** và **Users**.
+Tài liệu quy định chi tiết các API Endpoints cho hệ thống, bao gồm các Module: **Authentication**, **Users**, **Tourists**, **Guides**, và **Languages**.
 
 ---
 
@@ -258,59 +258,171 @@ Trả về thông tin User đã được cập nhật kèm theo các profile tư
 
 ---
 
-### 2.3 Chuyển đổi vai trò tài khoản (`PATCH /users/me/role`)
+## 3. Tourists Module (`/tourists`)
+
+### 3.1 Cập nhật hồ sơ Du khách (`PATCH /tourists/profile`)
 
 - **HTTP Method:** `PATCH`
-- **Endpoint:** `/api/v1/users/me/role`
-- **Access Control:** Authenticated User (`JwtAuthGuard`)
+- **Endpoint:** `/api/v1/tourists/profile`
+- **Access Control:** Authenticated Tourist (`Role: TOURIST`)
+
+#### Request Headers
+
+```http
+Authorization: Bearer <access_token>
+```
 
 #### Request Body
 
 ```json
 {
-  "role": "GUIDE"
+  "nationality": "VN",
+  "preferredLanguage": "vi",
+  "interests": ["Food", "Photography", "Camping"],
+  "travelPreferences": {
+    "budget": "medium",
+    "pace": "relaxed"
+  }
 }
 ```
-
-> _`role` nhận giá trị `"TOURIST"` hoặc `"GUIDE"`._
-
-#### Luồng xử lý (Flow):
-
-1. Nhận yêu cầu đổi vai trò sang `targetRole` (ví dụ `GUIDE` hoặc `TOURIST`).
-2. Tự động tạo hồ sơ tương ứng (`GuideProfile` hoặc `TouristProfile`) nếu tài khoản chưa từng có hồ sơ đó (Lazy Profile Initialization).
-3. Cập nhật `User.role = targetRole`.
-4. Trả về thông tin User kèm các profiles hiện tại.
 
 #### Response Success (200 OK)
 
 ```json
 {
-  "id": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
-  "fullName": "Nguyễn Văn A",
-  "phone": "0987654321",
-  "email": "nguyenvana@gmail.com",
-  "role": "GUIDE",
-  "status": "ACTIVE",
-  "touristProfile": {
-    "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
-    "preferredLanguage": null,
-    "nationality": null,
-    "interests": [],
-    "travelPreferences": null
-  },
-  "guideProfile": {
-    "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
-    "bio": null,
-    "yearsExperience": 0,
-    "hourlyRate": null,
-    "city": null,
-    "country": null,
-    "currency": "VND",
-    "isAvailable": false,
-    "verificationStatus": "UNVERIFIED",
-    "averageRating": "0",
-    "reviewCount": 0,
-    "languages": []
+  "userId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+  "nationality": "VN",
+  "preferredLanguage": "vi",
+  "interests": ["Food", "Photography", "Camping"],
+  "travelPreferences": {
+    "budget": "medium",
+    "pace": "relaxed"
   }
+}
+```
+
+---
+
+## 4. Guides Module & Language Management (`/guides`)
+
+### 4.1 Cập nhật hồ sơ Hướng dẫn viên (`PATCH /guides/profile`)
+
+- **HTTP Method:** `PATCH`
+- **Endpoint:** `/api/v1/guides/profile`
+- **Access Control:** Authenticated Guide (`Role: GUIDE`)
+
+#### Request Body
+
+```json
+{
+  "bio": "Hướng dẫn viên du lịch chuyên nghiệp với hơn 3 năm kinh nghiệm tại Đà Nẵng và Hội An",
+  "yearsExperience": 3,
+  "hourlyRate": 300000,
+  "city": "Đà Nẵng",
+  "country": "Việt Nam",
+  "currency": "VND"
+}
+```
+
+#### Response Success (200 OK)
+
+Trả về thông tin `GuideProfile` vừa cập nhật.
+
+---
+
+### 4.2 Lấy danh sách ngôn ngữ của Hướng dẫn viên (`GET /guides/me/languages`)
+
+- **HTTP Method:** `GET`
+- **Endpoint:** `/api/v1/guides/me/languages`
+- **Access Control:** Authenticated Guide (`Role: GUIDE`)
+
+#### Response Success (200 OK)
+
+```json
+[
+  {
+    "guideId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+    "languageId": "e5b8a012-3456-7890-abcd-ef1234567890",
+    "proficiencyLevel": "NATIVE",
+    "language": {
+      "id": "e5b8a012-3456-7890-abcd-ef1234567890",
+      "code": "vi",
+      "name": "Tiếng Việt"
+    }
+  },
+  {
+    "guideId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+    "languageId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+    "proficiencyLevel": "ADVANCED",
+    "language": {
+      "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+      "code": "en",
+      "name": "English"
+    }
+  }
+]
+```
+
+---
+
+### 4.3 Thêm / Cập nhật trình độ ngôn ngữ vào hồ sơ (`POST /guides/me/languages`)
+
+- **HTTP Method:** `POST`
+- **Endpoint:** `/api/v1/guides/me/languages`
+- **Access Control:** Authenticated Guide (`Role: GUIDE`)
+
+#### Request Body
+
+```json
+{
+  "languageId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+  "proficiencyLevel": "ADVANCED"
+}
+```
+
+> _`proficiencyLevel` nhận các giá trị: `"BASIC"`, `"INTERMEDIATE"`, `"ADVANCED"`, `"NATIVE"`._
+
+#### Response Success (201 Created / 200 OK)
+
+```json
+{
+  "guideId": "c1f7b8a0-7612-4e4b-912a-8d76b1f23456",
+  "languageId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+  "proficiencyLevel": "ADVANCED",
+  "language": {
+    "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+    "code": "en",
+    "name": "English"
+  }
+}
+```
+
+---
+
+### 4.4 Xóa một ngôn ngữ khỏi hồ sơ (`DELETE /guides/me/languages/:languageId`)
+
+- **HTTP Method:** `DELETE`
+- **Endpoint:** `/api/v1/guides/me/languages/:languageId`
+- **Access Control:** Authenticated Guide (`Role: GUIDE`)
+
+#### Path Parameters
+
+- `languageId` (`string`, UUID): ID của ngôn ngữ cần xóa.
+
+#### Response Success (200 OK)
+
+```json
+{
+  "message": "Đã xóa ngôn ngữ khỏi hồ sơ thành công"
+}
+```
+
+#### Response Error (404 Not Found)
+
+```json
+{
+  "statusCode": 404,
+  "message": "Ngôn ngữ chưa có trong danh sách hồ sơ của bạn",
+  "error": "Not Found"
 }
 ```
