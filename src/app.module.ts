@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TouristsModule } from './tourist/tourists.module';
 import { GuidesModule } from './guide/guides.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { GuidesModule } from './guide/guides.module';
       isGlobal: true,
     }),
     DatabaseModule,
+    CloudinaryModule,
     UsersModule,
     TouristsModule,
     GuidesModule,

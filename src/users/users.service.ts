@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SwitchRoleDto } from './dto/switch-role.dto';
 
@@ -23,7 +24,10 @@ const userIncludeOptions = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   findByPhone(phone: string) {
     return this.prisma.user.findUnique({
@@ -195,6 +199,41 @@ export class UsersService {
       },
       include: userIncludeOptions,
     });
+  }
+
+  async updateAvatar(userId: string, file: Express.Multer.File) {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    console.log(user);
+
+    if (user.avatarPublicId) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        await this.cloudinaryService.deleteImage(user.avatarPublicId);
+      } catch (error) {
+        console.error('Không thể xóa ảnh đại diện cũ trên Cloudinary:', error);
+      }
+    }
+
+    const uploadResult = await this.cloudinaryService.uploadAvatar(
+      file,
+      userId,
+    );
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        avatarUrl: uploadResult.url,
+        avatarPublicId: uploadResult.publicId,
+      },
+      include: userIncludeOptions,
+    });
+
+    return this.sanitizeUser(updatedUser);
   }
 
   private sanitizeUser<T extends { passwordHash?: string }>(user: T) {

@@ -107,6 +107,7 @@ model User {
   dateOfBirth         DateTime?  @map("date_of_birth")
   phone               String     @unique
   avatarUrl           String?    @map("avatar_url")
+  avatarPublicId      String?    @map("avatar_public_id")
   role                UserRole   @default(TOURIST)
   status              UserStatus @default(ACTIVE)
   emailVerificationAt DateTime?  @map("email_verification_at")
