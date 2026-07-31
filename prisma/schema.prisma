@@ -337,8 +337,10 @@ model Review {
 
 model UserCurrentLocation {
   userId         String         @id @map("user_id") @db.Uuid
+
+  location       Unsupported("geography(Point,4326)")
   latitude       Decimal        @db.Decimal(9, 6)
-  longtitude     Decimal        @map("longitude") @db.Decimal(9, 6)
+  longitude      Decimal        @map("longitude") @db.Decimal(9, 6)
   accuracyMeters Float?         @map("accuracy_meters")
   source         LocationSource
   capturedAt     DateTime       @map("captured_at") @db.Timestamptz(6)

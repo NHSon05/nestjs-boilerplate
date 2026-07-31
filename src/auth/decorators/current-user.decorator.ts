@@ -3,8 +3,8 @@ import { Request } from 'express';
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
-  role: string;
+  email?: string;
+  role?: string;
 }
 
 interface RequestWithUser extends Request {

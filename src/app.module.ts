@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { TouristsModule } from './tourist/tourists.module';
 import { GuidesModule } from './guide/guides.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     UsersModule,
     TouristsModule,
     GuidesModule,
+    LocationsModule,
     AuthModule,
   ],
   controllers: [AppController],
