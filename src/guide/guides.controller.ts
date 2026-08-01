@@ -4,8 +4,11 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
+  Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -15,11 +18,17 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from 'src/auth/decorators/current-user.decorator';
 import { UpdateGuideProfileDto } from './dto/update-guide-profile.dto';
 import { AddGuideLanguageDto } from './dto/guide-language.dto';
+import { FindNearbyGuidesDto } from 'src/locations/dto/find-nearby-guides.dto';
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
+import { LocationService } from 'src/locations/locations.service';
 
 @ApiTags('guides')
 @Controller('guides')
 export class GuidesController {
-  constructor(private readonly guidesService: GuidesService) {}
+  constructor(
+    private readonly guidesService: GuidesService,
+    private readonly locationsServices: LocationService,
+  ) {}
 
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
@@ -93,5 +102,48 @@ export class GuidesController {
     @Param('languageId') languageId: string,
   ) {
     return this.guidesService.removeLanguage(user.id, languageId);
+  }
+
+  @Get('nearby')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Trả về danh sách hướng dẫn viên trong bán kính',
+  })
+  findNearBy(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: FindNearbyGuidesDto,
+  ) {
+    return this.guidesService.findNearby(user.id, query);
+  }
+
+  @Patch('me/availability')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Cập nhật trạng thái sẵn sàng thành công',
+  })
+  updateAvailability(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateAvailabilityDto,
+  ) {
+    return this.guidesService.updateAvailability(user.id, dto);
+  }
+
+  @Get(':guideId')
+  @ApiParam({ name: 'guideId', description: 'UUID của hướng dẫn viên' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trả về thông tin hồ sơ HDV',
+  })
+  getPublicProfile(@Param('guideId', ParseUUIDPipe) guideId: string) {
+    return this.guidesService.getPublicProfile(guideId);
+  }
+
+  @Put()
+  updateCurrentLocation(@CurrentUser() user: AuthenticatedUser) {
+    return this.locationsServices.getMyCurrentLocation(user.id);
   }
 }

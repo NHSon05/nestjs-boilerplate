@@ -212,7 +212,6 @@ export class UsersService {
 
     if (user.avatarPublicId) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         await this.cloudinaryService.deleteImage(user.avatarPublicId);
       } catch (error) {
         console.error('Không thể xóa ảnh đại diện cũ trên Cloudinary:', error);
