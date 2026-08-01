@@ -250,9 +250,3 @@ Guide nhận request
 
 `GET /guides/nearby`
 `GET /guides/:guideId`
-
-`POST /guide-requests`
-`GET /guide-requests/me`
-`PATCH /guide-requests/:id/accept`
-`PATCH /guide-requests/:id/reject`
-`PATCH /guide-requests/:id/cancel`

@@ -173,7 +173,7 @@ export class GeospatialService {
         SELECT 1
         FROM "user_current_locations"
         WHERE "user_id" = ${userId}::uuid
-          AND "expires_at" > NOW()
+         AND ("expires_at" IS NULL OR "expires_at" > NOW())
       ) AS "exists"
     `;
     return rows[0]?.exists ?? false;

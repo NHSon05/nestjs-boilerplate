@@ -9,6 +9,7 @@ import { TouristsModule } from './tourist/tourists.module';
 import { GuidesModule } from './guide/guides.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { LocationsModule } from './locations/locations.module';
+import { GuideRequestsModule } from './guide-request/guide-requests.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { LocationsModule } from './locations/locations.module';
     GuidesModule,
     LocationsModule,
     AuthModule,
+    GuideRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

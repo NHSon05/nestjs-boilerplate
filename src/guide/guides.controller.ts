@@ -133,16 +133,32 @@ export class GuidesController {
   }
 
   @Get(':guideId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiParam({ name: 'guideId', description: 'UUID của hướng dẫn viên' })
   @ApiResponse({
     status: 200,
     description: 'Trả về thông tin hồ sơ HDV',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized / Token không hợp lệ',
   })
   getPublicProfile(@Param('guideId', ParseUUIDPipe) guideId: string) {
     return this.guidesService.getPublicProfile(guideId);
   }
 
   @Put()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Cập nhật/lấy vị trí hiện tại',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized / Token không hợp lệ',
+  })
   updateCurrentLocation(@CurrentUser() user: AuthenticatedUser) {
     return this.locationsServices.getMyCurrentLocation(user.id);
   }

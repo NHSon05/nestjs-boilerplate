@@ -44,6 +44,7 @@ enum GuideRequestStatus {
   REJECTED
   CANCELLED
   COMPLETED
+  EXPIRED
   NO_SHOW
 }
 
@@ -80,11 +81,17 @@ enum NotificationType {
   GUIDE_REQUEST_RECEIVED
   GUIDE_REQUEST_ACCEPTED
   GUIDE_REQUEST_REJECTED
+  GUIDE_REQUEST_CANCELLED
   NEW_MESSAGE
   TRIP_REMINDER
   TRIP_COMPLETED
   NEW_REVIEW
   SYSTEM
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
 }
 
 enum AiConversationStatus {
@@ -120,8 +127,8 @@ model User {
   messages           Message[]
   aiConversations    AiConversation[]
 
-  sentGuideRequests GuideRequest[]        @relation("TouristRequest")
-  guideRequest      GuideRequest[]        @relation("GuideRequest")
+  sentGuideRequests GuideRequest[]        @relation("TouristRequests")
+  guideRequest      GuideRequest[]        @relation("GuideRequests")
   reviewsGiven      Review[]              @relation("ReviewsGiven")
   reviewsReceived   Review[]              @relation("ReviewsReceived")
   currentLocation   UserCurrentLocation?
@@ -223,27 +230,36 @@ model GuideLanguage {
 
 model GuideRequest {
   id                 String             @id @default(uuid()) @db.Uuid
+
   touristId          String             @map("tourist_id") @db.Uuid
   guideId            String             @map("guide_id") @db.Uuid
+
   title              String
   description        String?
   status             GuideRequestStatus @default(PENDING)
   startAt            DateTime           @map("start_at") @db.Timestamptz(6)
   endAt              DateTime           @map("end_at") @db.Timestamptz(6)
+
   meetingAddress     String?            @map("meeting_address")
+  meetingPlaceId     String?            @map("meeting_place_id")
+  meetingName        String?            @map("meeting_name")
   meetingLatitude    Decimal?           @map("meeting_latitude") @db.Decimal(9, 6)
-  meetingLongtitude  Decimal?           @map("meeting_longitude") @db.Decimal(9, 6)
-  proposedPrice      Decimal?           @map("proposed_price") @db.Decimal(12, 0)
+  meetingLongitude   Decimal?           @map("meeting_longitude") @db.Decimal(9, 6)
+
+  proposedPrice      Decimal?           @map("proposed_price") @db.Decimal(12, 2)
   currency           String             @default("VND") @db.Char(3)
   acceptedAt         DateTime?          @map("accepted_at") @db.Timestamptz(6)
   rejectedAt         DateTime?          @map("rejected_at") @db.Timestamptz(6)
   cancelledAt        DateTime?          @map("cancelled_at") @db.Timestamptz(6)
   completedAt        DateTime?          @map("completed_at") @db.Timestamptz(6)
+  expiresAt          DateTime?          @map("expires_at") @db.Timestamptz(6)
+
+  rejectionReason    String?            @map("rejection_reason")
   cancellationReason String?            @map("cancellation_reason")
   version            Int                @default(1)
 
-  tourist User @relation("TouristRequest", fields: [touristId], references: [id])
-  guide   User @relation("GuideRequest", fields: [guideId], references: [id])
+  tourist User @relation("TouristRequests", fields: [touristId], references: [id],onDelete: Restrict)
+  guide   User @relation("GuideRequests", fields: [guideId], references: [id], onDelete: Restrict)
 
   conversation Conversation?
 
@@ -261,8 +277,9 @@ model Conversation {
   guideRequestId String?          @unique @map("guide_request_id") @db.Uuid
   type           ConversationType @default(GUIDE_REQUEST)
   lastMessageAt  DateTime?        @map("last_message_at") @db.Timestamptz(6)
+  status         ConversationStatus @default(ACTIVE)
 
-  guideRequest GuideRequest? @relation(fields: [guideRequestId], references: [id])
+  guideRequest GuideRequest? @relation(fields: [guideRequestId], references: [id], onDelete: Restrict)
 
   members  ConversationMember[]
   messages Message[]
@@ -373,7 +390,7 @@ model Notification {
   id          String              @id @default(uuid()) @db.Uuid
   userId      String              @map("user_id") @db.Uuid
   type        NotificationType
-  channel     NotificationChannel
+  channel     NotificationChannel @default(IN_APP)
   title       String
   body        String
   data        Json?
