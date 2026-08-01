@@ -37,7 +37,8 @@ export class LocationService {
             "accuracy_meters",
             "source",
             "captured_at",
-            "updated_at"
+            "updated_at",
+            "expires_at"
         )
         VALUES (
             ${userId}::uuid,
@@ -53,7 +54,7 @@ export class LocationService {
             ${dto.accuracy ?? null},
             'GPS'::"LocationSource",
             NOW(),
-            NOW()
+            NOW(),
         )
         ON CONFLICT ("user_id")
         DO UPDATE SET
@@ -63,7 +64,7 @@ export class LocationService {
             "accuracy_meters" = EXCLUDED."accuracy_meters",
             "source" = EXCLUDED."source",
             "captured_at" = NOW(),
-            "updated_at" = NOW()
+            "updated_at" = NOW(),
     `;
 
     const locations = await this.prisma.$queryRaw<CurrentLocationResult[]>`
