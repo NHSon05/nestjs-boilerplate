@@ -67,17 +67,12 @@ export class GuideRequestsController {
     status: 401,
     description: 'Unauthorized / Token không hợp lệ',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Người dùng không tồn tại',
-  })
   findMyRequests(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: GetMyGuideRequestsDto,
   ) {
     return this.guideRequestsService.findMyRequests(user.id, query, user.role);
   }
-
   @Get(':requestId')
   @ApiParam({ name: 'requestId', description: 'UUID của yêu cầu hướng dẫn' })
   @ApiResponse({
