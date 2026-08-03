@@ -10,6 +10,7 @@ import { GuidesModule } from './guide/guides.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { LocationsModule } from './locations/locations.module';
 import { GuideRequestsModule } from './guide-request/guide-requests.module';
+import { CallsModule } from './calls/calls.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GuideRequestsModule } from './guide-request/guide-requests.module';
     LocationsModule,
     AuthModule,
     GuideRequestsModule,
+    CallsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -55,6 +55,7 @@ export class LocationService {
             'GPS'::"LocationSource",
             NOW(),
             NOW(),
+            NULL
         )
         ON CONFLICT ("user_id")
         DO UPDATE SET
@@ -64,7 +65,7 @@ export class LocationService {
             "accuracy_meters" = EXCLUDED."accuracy_meters",
             "source" = EXCLUDED."source",
             "captured_at" = NOW(),
-            "updated_at" = NOW(),
+            "updated_at" = NOW()
     `;
 
     const locations = await this.prisma.$queryRaw<CurrentLocationResult[]>`
