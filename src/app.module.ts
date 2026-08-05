@@ -12,6 +12,7 @@ import { LocationsModule } from './locations/locations.module';
 import { GuideRequestsModule } from './guide-request/guide-requests.module';
 import { CallsModule } from './calls/calls.module';
 import { ConversationsModule } from './conversations/conversations.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ConversationsModule } from './conversations/conversations.module';
     GuideRequestsModule,
     CallsModule,
     ConversationsModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
