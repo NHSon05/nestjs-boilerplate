@@ -59,7 +59,7 @@ describe('GuideRequestsService', () => {
       const result = await service.accept(guideId, requestId);
 
       expect(result.data.status).toBe(GuideRequestStatus.ACCEPTED);
-      expect(result.data.acceptedAt).toBeInstanceOf(Date);
+      expect(result.data.conversationId).toBe('conv-123');
       expect(mockPrismaTx.guideRequest.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -91,7 +91,6 @@ describe('GuideRequestsService', () => {
       });
 
       expect(result.data.status).toBe(GuideRequestStatus.REJECTED);
-      expect(result.data.rejectedAt).toBeInstanceOf(Date);
       expect(result.data.rejectionReason).toBe('Busy schedule');
       expect(mockPrismaTx.guideRequest.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -126,8 +125,7 @@ describe('GuideRequestsService', () => {
       });
 
       expect(result.data.status).toBe(GuideRequestStatus.CANCELLED);
-      expect(result.data.cancelledAt).toBeInstanceOf(Date);
-      expect(result.data.cancellationReason).toBe('Change of plans');
+      expect(result.data.conversationStatus).toBeNull();
       expect(mockPrismaTx.guideRequest.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

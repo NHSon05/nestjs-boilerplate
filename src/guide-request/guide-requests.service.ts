@@ -15,6 +15,7 @@ import {
   NotificationStatus,
   NotificationType,
   ConversationStatus,
+  ConversationType,
 } from '@prisma/client';
 import { GetMyGuideRequestsDto } from './dto/get-my-guide-request.dto';
 import { RejectGuideRequestDto } from './dto/reject-guide-request.dto';
@@ -398,7 +399,9 @@ export class GuideRequestsService {
       const conversation = await tx.conversation.create({
         data: {
           guideRequestId: request.id,
+          type: ConversationType.GUIDE_REQUEST,
           status: ConversationStatus.ACTIVE,
+
           members: {
             create: [
               {
@@ -413,6 +416,7 @@ export class GuideRequestsService {
 
         select: {
           id: true,
+          type: true,
           status: true,
           createdAt: true,
         },

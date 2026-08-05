@@ -11,6 +11,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { LocationsModule } from './locations/locations.module';
 import { GuideRequestsModule } from './guide-request/guide-requests.module';
 import { CallsModule } from './calls/calls.module';
+import { ConversationsModule } from './conversations/conversations.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CallsModule } from './calls/calls.module';
     AuthModule,
     GuideRequestsModule,
     CallsModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
