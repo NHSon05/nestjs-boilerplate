@@ -59,6 +59,9 @@ enum MessageType {
   IMAGE
   FILE
   SYSTEM
+  AUDIO
+  VIDEO
+  CALL
 }
 
 enum CallType {
