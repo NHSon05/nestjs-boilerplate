@@ -36,7 +36,6 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách thông báo của tôi' })
   @ApiResponse({ status: 200, description: 'Trả về danh sách thông báo' })
   findAll(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,14 +51,12 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
-  @ApiOperation({ summary: 'Đánh dấu tất cả thông báo là đã đọc' })
   @ApiResponse({ status: 200, description: 'Đã đọc tất cả thông báo' })
   markAllAsRead(@CurrentUser() user: AuthenticatedUser) {
     return this.notificationsService.markAllAsRead(user.id);
   }
 
   @Patch(':notificationId/read')
-  @ApiOperation({ summary: 'Đánh dấu 1 thông báo là đã đọc' })
   @ApiResponse({ status: 200, description: 'Đã đánh dấu đã đọc' })
   markAsRead(
     @CurrentUser() user: AuthenticatedUser,
@@ -70,7 +67,6 @@ export class NotificationsController {
   }
 
   @Delete(':notificationId')
-  @ApiOperation({ summary: 'Xóa thông báo' })
   @ApiResponse({ status: 200, description: 'Đã xóa thông báo' })
   remove(
     @CurrentUser() user: AuthenticatedUser,

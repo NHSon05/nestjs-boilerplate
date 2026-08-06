@@ -32,7 +32,7 @@ DROP INDEX "notifications_user_id_status_created_at_idx";
 -- AlterTable
 ALTER TABLE "notifications" ADD COLUMN     "deleted_at" TIMESTAMPTZ(6),
 ADD COLUMN     "failed_at" TIMESTAMPTZ(6),
-ADD COLUMN     "updated_at" TIMESTAMPTZ(6) NOT NULL;
+ADD COLUMN     "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- CreateIndex
 CREATE INDEX "notifications_user_id_read_at_created_at_idx" ON "notifications"("user_id", "read_at", "created_at");
