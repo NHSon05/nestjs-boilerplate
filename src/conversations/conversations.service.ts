@@ -358,4 +358,18 @@ export class ConversationsService {
 
     return member;
   }
+
+  async getActiveMemberIds(conversationId: string): Promise<string[]> {
+    const members = await this.prisma.conversationMember.findMany({
+      where: {
+        conversationId,
+        leftAt: null,
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    return members.map((member) => member.userId);
+  }
 }

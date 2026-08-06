@@ -9,6 +9,7 @@ import {
   UploadApiErrorResponse,
   UploadApiResponse,
   v2 as CloudinaryType,
+  UploadApiOptions,
 } from 'cloudinary';
 import { CLOUDINARY } from './cloudinary.constants';
 import { UploadedImage } from './interface/image-upload.interface';
@@ -85,6 +86,71 @@ export class CloudinaryService {
       });
     } catch {
       throw new BadGatewayException('Không thể xóa ảnh trên Cloudinary');
+    }
+  }
+  uploadBuffer(
+    file: Express.Multer.File,
+    options: UploadApiOptions,
+  ): Promise<UploadApiResponse> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = this.cloudinary.uploader.upload_stream(
+        options,
+        (
+          error: UploadApiErrorResponse | undefined,
+          result: UploadApiResponse | undefined,
+        ) => {
+          if (error || !result) {
+            reject(
+              new BadGatewayException(
+                error?.message ?? 'Không thể upload file lên Cloudinary',
+              ),
+            );
+            return;
+          }
+
+          resolve(result);
+        },
+      );
+
+      uploadStream.on('error', () => {
+        reject(new BadGatewayException('Không thể đọc dữ liệu file upload'));
+      });
+
+      uploadStream.end(file.buffer);
+    });
+  }
+  uploadChatFile(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
+    return this.uploadBuffer(file, {
+      folder,
+      resource_type: 'auto',
+      use_filename: true,
+      unique_filename: true,
+      overwrite: false,
+    });
+  }
+  async deleteAsset(params: {
+    publicId: string;
+    resourceType?: 'image' | 'video' | 'raw';
+  }): Promise<void> {
+    try {
+      const response = (await this.cloudinary.uploader.destroy(
+        params.publicId,
+        {
+          resource_type: params.resourceType ?? 'image',
+          invalidate: true,
+        },
+      )) as { result?: string };
+
+      if (response.result !== 'ok' && response.result !== 'not found') {
+        throw new Error(
+          `Cloudinary delete result: ${response.result ?? 'unknown'}`,
+        );
+      }
+    } catch {
+      throw new BadGatewayException('Không thể xóa file trên Cloudinary');
     }
   }
 }

@@ -13,6 +13,7 @@ import { GuideRequestsModule } from './guide-request/guide-requests.module';
 import { CallsModule } from './calls/calls.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
+import { UploadsModule } from './upload/uploads.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MessagesModule } from './messages/messages.module';
     CallsModule,
     ConversationsModule,
     MessagesModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
