@@ -11,7 +11,7 @@ describe('MessagesController', () => {
   const mockUser: AuthenticatedUser = {
     id: 'user-uuid-1',
     email: 'user@example.com',
-    role: 'TOURIST' as any,
+    role: 'TOURIST',
   };
 
   const mockMessagesService = {
@@ -42,13 +42,24 @@ describe('MessagesController', () => {
     it('gọi messagesService.findByConversation với đúng tham số', async () => {
       const conversationId = 'conv-123';
       const query = { limit: 20 };
-      const expected = { data: [], pagination: { nextCursor: null, hasMore: false, limit: 20 } };
+      const expected = {
+        data: [],
+        pagination: { nextCursor: null, hasMore: false, limit: 20 },
+      };
 
       mockMessagesService.findByConversation.mockResolvedValue(expected);
 
-      const result = await controller.findByConversation(mockUser, conversationId, query);
+      const result = await controller.findByConversation(
+        mockUser,
+        conversationId,
+        query,
+      );
 
-      expect(service.findByConversation).toHaveBeenCalledWith(mockUser.id, conversationId, query);
+      expect(service.findByConversation).toHaveBeenCalledWith(
+        mockUser.id,
+        conversationId,
+        query,
+      );
       expect(result).toEqual(expected);
     });
   });
@@ -61,13 +72,21 @@ describe('MessagesController', () => {
         content: 'Hello',
         clientMessageId: 'cf782852-b682-4c52-82cc-e46535444648',
       };
-      const expected = { message: 'Gửi tin nhắn thành công', data: {}, duplicated: false };
+      const expected = {
+        message: 'Gửi tin nhắn thành công',
+        data: {},
+        duplicated: false,
+      };
 
       mockMessagesService.create.mockResolvedValue(expected);
 
       const result = await controller.create(mockUser, conversationId, dto);
 
-      expect(service.create).toHaveBeenCalledWith(mockUser.id, conversationId, dto);
+      expect(service.create).toHaveBeenCalledWith(
+        mockUser.id,
+        conversationId,
+        dto,
+      );
       expect(result).toEqual(expected);
     });
   });

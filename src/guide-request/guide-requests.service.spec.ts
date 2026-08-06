@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GuideRequestsService } from './guide-requests.service';
 import { PrismaService } from 'src/database/prisma.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 import { GuideRequestStatus } from '@prisma/client';
 
 describe('GuideRequestsService', () => {
@@ -24,6 +25,12 @@ describe('GuideRequestsService', () => {
     $transaction: jest.fn((cb: (tx: any) => Promise<any>) => cb(mockPrismaTx)),
   };
 
+  const mockNotificationsService = {
+    createWithTransaction: jest.fn().mockResolvedValue({ id: 'noti-123', userId: 'user-123' }),
+    emitCreatedNotification: jest.fn(),
+    sendNotification: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,6 +38,10 @@ describe('GuideRequestsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();

@@ -15,10 +15,15 @@ import { PrismaService } from 'src/database/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { NotificationType } from '@prisma/client';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findByConversation(
     currentUserId: string,
@@ -257,6 +262,27 @@ export class MessagesService {
 
         return message;
       });
+
+      const otherMember = membership.conversation.members?.find(
+        (m) => m.userId !== currentUserId,
+      );
+
+      if (otherMember) {
+        await this.notificationsService.sendNotification({
+          userId: otherMember.userId,
+          type: NotificationType.MESSAGE_RECEIVED,
+          title: 'Tin nhắn mới',
+          body: `${createdMessage.sender.fullName}: ${
+            createdMessage.type === MessageType.TEXT
+              ? createdMessage.content
+              : '[Tệp đính kèm]'
+          }`,
+          data: {
+            conversationId,
+            messageId: createdMessage.id,
+          },
+        });
+      }
 
       return {
         message: 'Gửi tin nhắn thành công',
@@ -514,6 +540,14 @@ export class MessagesService {
           select: {
             id: true,
             status: true,
+            members: {
+              where: {
+                leftAt: null,
+              },
+              select: {
+                userId: true,
+              },
+            },
           },
         },
       },

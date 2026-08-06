@@ -10,6 +10,7 @@ import { CallsService } from './calls.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { CallsGateway } from './calls.gateway';
 import { AgoraService } from 'src/agora/agora.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('CallsService', () => {
   let service: CallsService;
@@ -44,6 +45,10 @@ describe('CallsService', () => {
     }),
   };
 
+  const mockNotificationsService = {
+    sendNotification: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,6 +64,10 @@ describe('CallsService', () => {
         {
           provide: AgoraService,
           useValue: mockAgoraService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();

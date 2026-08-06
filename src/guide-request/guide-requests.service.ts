@@ -20,10 +20,14 @@ import {
 import { GetMyGuideRequestsDto } from './dto/get-my-guide-request.dto';
 import { RejectGuideRequestDto } from './dto/reject-guide-request.dto';
 import { CancelGuideRequestDto } from './dto/cancel-guide-request.dto';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class GuideRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(touristId: string, dto: CreateGuideRequestDto) {
     if (touristId === dto.guideId) {
@@ -125,7 +129,7 @@ export class GuideRequestsService {
         'Bạn đã có một yêu cầu đang hoạt động với Guide này trong khoảng thời gian đã chọn',
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const request = await tx.guideRequest.create({
         data: {
           touristId,
@@ -162,26 +166,32 @@ export class GuideRequestsService {
         },
       });
 
-      await tx.notification.create({
-        data: {
+      const notification =
+        await this.notificationsService.createWithTransaction(tx, {
           userId: dto.guideId,
           type: NotificationType.GUIDE_REQUEST_RECEIVED,
-          channel: NotificationChannel.IN_APP,
-          status: NotificationStatus.PENDING,
           title: 'Bạn có yêu cầu hướng dẫn mới',
           body: `${tourist.fullName} đã gửi một yêu cầu hướng dẫn`,
           data: {
             guideRequestId: request.id,
             touristId,
           },
-        },
-      });
+        });
 
       return {
-        message: 'Gửi yêu cầu thành công',
-        data: request,
+        request,
+        notification,
       };
     });
+
+    await this.notificationsService.emitCreatedNotification(
+      result.notification,
+    );
+
+    return {
+      message: 'Gửi yêu cầu thành công',
+      data: result.request,
+    };
   }
   async findMyRequests(
     userId: string,

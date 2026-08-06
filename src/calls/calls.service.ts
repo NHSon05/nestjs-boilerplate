@@ -13,6 +13,8 @@ import { CallsGateway } from './calls.gateway';
 import { AgoraService } from 'src/agora/agora.service';
 import { randomUUID } from 'crypto';
 import { createAgoraUid } from 'src/agora/agora-uid.util';
+import { NotificationType } from '@prisma/client';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class CallsService {
@@ -20,6 +22,7 @@ export class CallsService {
     private readonly prisma: PrismaService,
     private readonly callsGateway: CallsGateway,
     private readonly agoraService: AgoraService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createCall(
@@ -140,6 +143,18 @@ export class CallsService {
       channelName: call.channelName,
       caller: call.caller,
       ringingAt: call.ringingAt,
+    });
+
+    await this.notificationsService.sendNotification({
+      userId: receiverId,
+      type: NotificationType.CALL_INCOMING,
+      title: 'Cuộc gọi đến',
+      body: `${call.caller.fullName} đang gọi cho bạn`,
+      data: {
+        callId: call.id,
+        conversationId: call.conversationId,
+        type: call.type,
+      },
     });
 
     return {

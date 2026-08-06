@@ -92,7 +92,7 @@ enum NotificationChannel {
 
 enum NotificationStatus {
   PENDING
-  SENT
+  DELIVERED
   FAILED
 }
 
@@ -101,10 +101,19 @@ enum NotificationType {
   GUIDE_REQUEST_ACCEPTED
   GUIDE_REQUEST_REJECTED
   GUIDE_REQUEST_CANCELLED
-  NEW_MESSAGE
+
+  MESSAGE_RECEIVED
+
+  CALL_INCOMING
+  CALL_ACCEPTED
+  CALL_REJECTED
+  CALL_CANCELLED
+  CALL_MISSED
+  CALL_ENDED
+
   TRIP_REMINDER
   TRIP_COMPLETED
-  NEW_REVIEW
+  REVIEW_AVAILABLE
   SYSTEM
 }
 
@@ -163,6 +172,7 @@ model User {
   currentLocation   UserCurrentLocation?
   locationHistory   UserLocationHistory[]
   notifications     Notification[]
+  deviceTokens      DeviceToken[]
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -478,22 +488,46 @@ model UserLocationHistory {
 }
 
 model Notification {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @map("user_id") @db.Uuid
-  type        NotificationType
-  channel     NotificationChannel @default(IN_APP)
-  title       String
-  body        String
-  data        Json?
-  status      NotificationStatus  @default(PENDING)
-  readAt      DateTime?           @map("read_at") @db.Timestamptz(6)
-  deliveredAt DateTime?           @map("delivered_at") @db.Timestamptz(6)
-  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  id      String              @id @default(uuid()) @db.Uuid
+  userId  String              @map("user_id") @db.Uuid
+  type    NotificationType
+  channel NotificationChannel @default(IN_APP)
+  status  NotificationStatus  @default(PENDING)
+
+  title String
+  body  String
+  data  Json?
+
+  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
+  failedAt    DateTime? @map("failed_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, status, createdAt])
+  @@index([userId, readAt, createdAt])
+  @@index([userId, deletedAt, createdAt])
+  @@index([status, createdAt])
   @@map("notifications")
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique
+  deviceType String?  @map("device_type")
+  isActive   Boolean  @default(true) @map("is_active")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId, isActive])
+  @@map("device_tokens")
 }
 
 model AiConversation {

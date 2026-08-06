@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { MessagesService } from './messages.service';
 import { PrismaService } from 'src/database/prisma.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('MessagesService', () => {
   let service: MessagesService;
@@ -39,8 +40,8 @@ describe('MessagesService', () => {
     conversation: {
       update: jest.fn(),
     },
-    $transaction: jest.fn(async (cb: (tx: typeof mockPrismaTx) => Promise<any>) =>
-      cb(mockPrismaTx),
+    $transaction: jest.fn(
+      async (cb: (tx: typeof mockPrismaTx) => Promise<any>) => cb(mockPrismaTx),
     ),
   };
 
@@ -49,6 +50,10 @@ describe('MessagesService', () => {
   const conversationId = 'conv-uuid-123';
   const messageId = 'msg-uuid-456';
   const clientMsgId = 'cf782852-b682-4c52-82cc-e46535444648';
+
+  const mockNotificationsService = {
+    sendNotification: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -59,6 +64,10 @@ describe('MessagesService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();
@@ -94,11 +103,17 @@ describe('MessagesService', () => {
 
       mockPrismaService.message.findMany.mockResolvedValue(mockMessages);
 
-      const result = await service.findByConversation(currentUserId, conversationId, {
-        limit: 20,
-      });
+      const result = await service.findByConversation(
+        currentUserId,
+        conversationId,
+        {
+          limit: 20,
+        },
+      );
 
-      expect(mockPrismaService.conversationMember.findUnique).toHaveBeenCalledWith({
+      expect(
+        mockPrismaService.conversationMember.findUnique,
+      ).toHaveBeenCalledWith({
         where: {
           conversationId_userId: {
             conversationId,
@@ -139,9 +154,13 @@ describe('MessagesService', () => {
 
       mockPrismaService.message.findMany.mockResolvedValue(mockMessages);
 
-      const result = await service.findByConversation(currentUserId, conversationId, {
-        limit: 20,
-      });
+      const result = await service.findByConversation(
+        currentUserId,
+        conversationId,
+        {
+          limit: 20,
+        },
+      );
 
       expect(result.data[0].content).toBeNull();
       expect(result.data[0].attachments).toEqual([]);
@@ -151,7 +170,9 @@ describe('MessagesService', () => {
       mockPrismaService.conversationMember.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.findByConversation(currentUserId, conversationId, { limit: 20 }),
+        service.findByConversation(currentUserId, conversationId, {
+          limit: 20,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
   });

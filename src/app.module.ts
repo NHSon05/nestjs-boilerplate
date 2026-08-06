@@ -14,6 +14,7 @@ import { CallsModule } from './calls/calls.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { UploadsModule } from './upload/uploads.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UploadsModule } from './upload/uploads.module';
     ConversationsModule,
     MessagesModule,
     UploadsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
