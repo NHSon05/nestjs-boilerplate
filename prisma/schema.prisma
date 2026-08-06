@@ -126,12 +126,18 @@ enum ConversationStatus {
 enum AiConversationStatus {
   ACTIVE
   ARCHIVED
+  DELETED
 }
 
 enum AiMessageRole {
   USER
   ASSISTANT
   SYSTEM
+}
+
+enum AiProvider {
+  GEMINI
+  OPENAI
 }
 
 enum AttachmentType {
@@ -504,7 +510,7 @@ model Notification {
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -515,11 +521,11 @@ model Notification {
 }
 
 model DeviceToken {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  token      String   @unique
-  deviceType String?  @map("device_type")
-  isActive   Boolean  @default(true) @map("is_active")
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  token      String  @unique
+  deviceType String? @map("device_type")
+  isActive   Boolean @default(true) @map("is_active")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -531,13 +537,17 @@ model DeviceToken {
 }
 
 model AiConversation {
-  id            String               @id @default(uuid()) @db.Uuid
-  userId        String               @map("user_id") @db.Uuid
-  title         String?
-  status        AiConversationStatus @default(ACTIVE)
-  provider      String               @default("gemini")
-  model         String?
-  lastMessageAt DateTime?            @map("last_message_at") @db.Timestamptz(6)
+  id       String               @id @default(uuid()) @db.Uuid
+  userId   String               @map("user_id") @db.Uuid
+  title    String?
+  status   AiConversationStatus @default(ACTIVE)
+  provider String               @default("gemini")
+  model    String?
+
+  systemInstruction String? @map("system_instruction")
+
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -546,6 +556,7 @@ model AiConversation {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@index([userId, status, updatedAt])
   @@index([userId, updatedAt])
   @@map("ai_conversations")
 }
@@ -558,7 +569,11 @@ model AiMessage {
   model            String?
   promptTokens     Int?          @map("prompt_tokens")
   completionTokens Int?          @map("completion_tokens")
-  metadata         Json?
+  totalTokens      Int?          @map("total_tokens")
+
+  finishReason String? @map("finish_reason")
+
+  metadata Json?
 
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 

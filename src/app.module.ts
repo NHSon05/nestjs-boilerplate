@@ -15,6 +15,7 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { UploadsModule } from './upload/uploads.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     MessagesModule,
     UploadsModule,
     NotificationsModule,
+    AiAssistantModule,
   ],
   controllers: [AppController],
   providers: [AppService],
