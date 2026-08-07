@@ -41,7 +41,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:5173',
-      process.env.CLIENT_URL || '',
+      process.env.CORS_ORIGINS ?? process.env.CLIENT_URL ?? '',
     ].filter(Boolean),
     credentials: true,
   });
