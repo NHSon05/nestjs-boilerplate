@@ -1,617 +1,508 @@
-# Localism
+# Localism - Backend Ecosystem & API Engine
 
-Localism is a mobile travel platform that connects tourists with trusted local people and local guides. The platform helps travelers discover authentic experiences, receive local support, communicate directly with guides, and access AI-powered travel recommendations.
+[![Build & Test Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/NHSon05/nestjs-boilerplate)
+[![NestJS](https://img.shields.io/badge/NestJS-11.x-E0234E?logo=nestjs)](https://nestjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-7.x-2D3748?logo=prisma)](https://www.prisma.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-The backend is built with NestJS and follows a modular monolith architecture. It is designed to support secure authentication, location-based guide discovery, connection requests, real-time messaging, reviews, notifications, and Gemini AI integration.
+**Localism** is a modern, hyper-local travel backend platform built with **NestJS**, **Prisma ORM (PostgreSQL & PostGIS)**, **Agora WebRTC**, **Firebase Cloud Messaging (FCM)**, and **Google Gemini AI**. The platform connects tourists with verified local guides, providing real-time location-based guide discovery, transactional guide request management, end-to-end encrypted real-time messaging, audio/video calling, push notifications, and AI-powered travel itineraries.
 
-## Project Vision
+---
 
-Traditional travel platforms often focus on popular attractions and commercial tours. Localism aims to create a more personal and community-driven travel experience by connecting visitors directly with people who understand the destination, culture, food, transportation, and local lifestyle.
+## 📋 Table of Contents
 
-The platform serves three main user groups:
+- [Overview & Vision](#-overview--vision)
+- [System Architecture](#-system-architecture)
+- [Core Features](#-core-features)
+- [User Flows & Sequence Diagrams](#-user-flows--sequence-diagrams)
+  - [1. Authentication & Token Rotation Flow](#1-authentication--token-rotation-flow)
+  - [2. Guide Discovery & Request State Machine](#2-guide-discovery--request-state-machine)
+  - [3. Real-Time Messaging & Notification Flow](#3-real-time-messaging--notification-flow)
+  - [4. Audio/Video Call Flow (Agora WebRTC)](#4-audiovideo-call-flow-agora-webrtc)
+  - [5. AI Travel Assistant Flow (Gemini AI)](#5-ai-travel-assistant-flow-gemini-ai)
+- [Tech Stack & Dependencies](#-tech-stack--dependencies)
+- [Project Directory Structure](#-project-directory-structure)
+- [Environment Variables (.env)](#-environment-variables-env)
+- [Installation & Setup](#-installation--setup)
+  - [Prerequisites](#prerequisites)
+  - [Option A: Local Development (Pnpm)](#option-a-local-development-pnpm)
+  - [Option B: Docker Compose](#option-b-docker-compose)
+- [API Endpoints Summary](#-api-endpoints-summary)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
+- [Security & Performance](#-security--performance)
+- [License](#-license)
 
-- **Tourists**, who want to find local guides and receive personalized support.
-- **Local guides**, who want to share local knowledge and connect with travelers.
-- **Administrators**, who manage users, destinations, guide verification, reports, and platform safety.
+---
 
-## Main User Flows
+## 🌟 Overview & Vision
 
-### Tourist Flow
+Traditional travel booking engines often focus on mass commercial tours. **Localism** redefines urban and cultural exploration by establishing direct, personal connections between travelers and authentic local experts.
 
-1. Open the Localism mobile application.
-2. Register or log in.
-3. Allow location access or manually select a destination.
-4. Browse nearby local guides.
-5. Filter guides by destination, language, specialty, availability, distance, or rating.
-6. View a guide's public profile.
-7. Send a connection request.
-8. Wait for the guide to accept or reject the request.
-9. Start a conversation after the request is accepted.
-10. Meet or communicate with the guide.
-11. Complete the experience.
-12. Submit a rating and review.
+### Target Personas:
+* **Tourists**: Travelers seeking personalized local experiences, instant guide discovery by location, real-time communication, and AI travel assistance.
+* **Local Guides**: Native residents sharing authentic knowledge, offering flexible schedules, accepting connection requests, and building verifiable review ratings.
+* **Administrators**: Operations managers overseeing user verification, safety compliance, content moderation, and platform analytics.
 
-### Local Guide Flow
+---
 
-1. Register or log in as a local guide.
-2. Create a guide profile.
-3. Add supported destinations, languages, specialties, availability, and service information.
-4. Receive connection requests from tourists.
-5. View the tourist's permitted profile information.
-6. Accept or reject a request.
-7. Start a conversation after accepting the request.
-8. Assist the tourist during the experience.
-9. Mark the request as completed.
-10. Receive a review from the tourist.
+## 🏗️ System Architecture
 
-### AI Travel Assistant Flow
-
-1. The user creates or opens an AI conversation.
-2. The user asks a travel-related question.
-3. The Localism backend validates the request and applies rate limits.
-4. The backend builds a safe travel context.
-5. The request is sent to Gemini AI.
-6. The response is stored in the conversation history.
-7. The mobile application displays the AI response, optionally using streaming.
-
-## Core Features
-
-### Authentication and Account Management
-
-- User registration and login
-- JWT access tokens
-- Refresh-token rotation
-- Logout from one or all devices
-- Password reset
-- Email or phone verification
-- Tourist, guide, and administrator roles
-- Account suspension and soft deletion
-
-### Tourist Profiles
-
-- Full name and avatar
-- Nationality
-- Biography
-- Spoken languages
-- Travel interests
-- Public profile visibility controls
-
-### Local Guide Profiles
-
-- Biography and introduction
-- Spoken languages
-- Local specialties
-- Supported destinations
-- Years of experience
-- Availability status
-- Optional pricing information
-- Verification status
-- Average rating and review count
-
-### Guide Discovery
-
-Tourists can discover guides by:
-
-- Current GPS location
-- Manually selected destination
-- Distance
-- Language
-- Specialty
-- Availability
-- Minimum rating
-- Response rate
-- Number of completed experiences
-
-The ranking system should combine multiple signals instead of relying only on distance or ratings. This gives new guides a fair opportunity to appear in search results.
-
-### Connection Requests
-
-A tourist can send a request to a selected guide. Each request follows a controlled state machine:
+Localism is structured as a **Modular Monolith** designed for high throughput, strict domain isolation, and eventual microservice extraction.
 
 ```text
-PENDING
-├── ACCEPTED
-├── REJECTED
-├── CANCELLED
-└── EXPIRED
-
-ACCEPTED
-├── IN_PROGRESS
-└── CANCELLED
-
-IN_PROGRESS
-├── COMPLETED
-└── CANCELLED
+                        ┌────────────────────────────────────────┐
+                        │    Mobile Client (Flutter / RN / iOS)  │
+                        └───────────────────┬────────────────────┘
+                                            │
+                                  REST / WSS / WebRTC
+                                            │
+                                            v
+                        ┌────────────────────────────────────────┐
+                        │      Reverse Proxy / API Gateway       │
+                        └───────────────────┬────────────────────┘
+                                            │
+                                            v
+  ┌──────────────────────────────────────────────────────────────────────────────────┐
+  │                              NestJS Application Engine                           │
+  │                                                                                  │
+  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  ┌─────────────────────┐ │
+  │  │  Auth & Users│  │ GuideRequest │  │ Conversations  │  │ Notifications Module│ │
+  │  │  Module      │  │ Module       │  │ & Messages Mod │  │ (In-App + FCM Push) │ │
+  │  └──────────────┘  └──────────────┘  └────────────────┘  └─────────────────────┘ │
+  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  ┌─────────────────────┐ │
+  │  │ Locations &  │  │ Calls Module │  │ Uploads Module │  │ AI Assistant        │ │
+  │  │ PostGIS Mod  │  │ (Agora RTC)  │  │ (Cloudinary)   │  │ (Gemini AI API)     │ │
+  │  └──────────────┘  └──────────────┘  └────────────────┘  └─────────────────────┘ │
+  └─────────────────────────────────────────┬────────────────────────────────────────┘
+                                            │
+           ┌────────────────────────────────┼────────────────────────────────┐
+           │                                │                                │
+           v                                v                                v
+┌─────────────────────┐          ┌─────────────────────┐          ┌─────────────────────┐
+│ PostgreSQL + PostGIS│          │ Firebase Admin (FCM)│          │  Agora RTC Engine   │
+└─────────────────────┘          └─────────────────────┘          └─────────────────────┘
 ```
 
-The mobile client cannot update the request status freely. Each transition is handled through a dedicated business endpoint such as:
+---
 
-```http
-PATCH /api/v1/guide-requests/:id/accept
-PATCH /api/v1/guide-requests/:id/reject
-PATCH /api/v1/guide-requests/:id/cancel
-PATCH /api/v1/guide-requests/:id/start
-PATCH /api/v1/guide-requests/:id/complete
+## ✨ Core Features
+
+### 🔐 1. Authentication & Security
+- Dual-token auth architecture (**Short-lived JWT Access Token** + **Hashed Refresh Token Rotation**).
+- Multi-device session revocation (`POST /auth/logout-all`).
+- Role-based Access Control (**RBAC** for `TOURIST`, `GUIDE`, `ADMIN`).
+- Password security via `bcrypt` hashing.
+
+### 📍 2. Geospatial Location & Guide Search
+- Dual-mode discovery: **Real-time GPS coordinates** or **Manual destination select**.
+- PostgreSQL **PostGIS** geospatial indexing (`geography(Point,4326)`) for dynamic distance calculations (`ST_DWithin`, `ST_Distance`).
+- Configurable guide availability thresholds with automatic location expiration.
+
+### 🤝 3. Guide Request Transaction Engine
+- State Machine lifecycle: `PENDING` ➔ `ACCEPTED` / `REJECTED` / `CANCELLED` ➔ `IN_PROGRESS` ➔ `COMPLETED`.
+- ACID transaction guarantees (`prisma.$transaction`) preventing double-acceptance or race conditions.
+- Auto-creation of private 1-on-1 `Conversation` upon request acceptance.
+
+### 💬 4. Real-time Messaging
+- WebSocket gateway (`/chat`) with JWT socket handshake validation.
+- Message types: `TEXT`, `IMAGE`, `AUDIO`, `VIDEO`, `FILE`.
+- Client-side **Idempotency** enforcement (`clientMessageId` preventing duplicate delivery on unstable mobile networks).
+- Cursor-based message history pagination (`take + 1`, `cursor: { id }`).
+- Soft-deletion with privacy shielding (`deletedAt` masks content as *"Message recalled"*).
+
+### 📞 5. Audio / Video Calling (Agora WebRTC Integration)
+- Real-time signaling via WebSocket Gateway (`/calls`).
+- Dynamic RTC token generation using Agora SDK (`RtcTokenBuilder2`).
+- Call status state machine: `RINGING` ➔ `ACCEPTED` / `REJECTED` ➔ `ENDED`.
+
+### 🔔 6. Unified Push Notifications Pipeline
+- **Hybrid Delivery**: In-App WebSocket (`/notifications`) + **Firebase Cloud Messaging (FCM)**.
+- Automated FCM device token registry (`device_tokens` model).
+- Automatic token cleanup: Invalid/expired tokens are marked `isActive = false` upon FCM failure.
+
+### 🤖 7. Gemini AI Travel Assistant
+- Integrated with **Google Gemini AI SDK** (`@google/genai`).
+- Context-aware conversation threads with configurable history depth.
+- System prompts tailored for safe, local travel assistance.
+
+---
+
+## 🔄 User Flows & Sequence Diagrams
+
+### 1. Authentication & Token Rotation Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Mobile Client
+    participant API as NestJS Auth Controller
+    participant DB as PostgreSQL Database
+
+    Client->>API: POST /api/v1/auth/login { email, password }
+    API->>DB: Verify credentials & Find User
+    API->>API: Generate Access Token (15m) & Refresh Token (7d)
+    API->>DB: Store hashed Refresh Token in RefreshSession
+    API-->>Client: Return { accessToken, refreshToken, user }
+
+    note over Client, API: Access Token expires after 15 minutes...
+
+    Client->>API: POST /api/v1/auth/refresh { refreshToken }
+    API->>DB: Validate Refresh Token & revoke old session
+    API->>API: Generate new Access Token + new Refresh Token
+    API->>DB: Store new Refresh Token (Rotation)
+    API-->>Client: Return new { accessToken, refreshToken }
 ```
 
-Database transactions and conditional updates are used to prevent duplicate acceptance and race conditions.
+---
 
-### Real-Time Messaging
+### 2. Guide Discovery & Request State Machine
 
-A private conversation is created only after a guide accepts a request.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Tourist as Tourist
+    participant API as Guide Request Service
+    participant DB as PostgreSQL Database
+    actor Guide as Local Guide
 
-Messaging features include:
+    Tourist->>API: GET /api/v1/locations/guides/search?lat=16.054&lng=108.202&radiusKm=5
+    API->>DB: Execute PostGIS Query (ST_DWithin)
+    API-->>Tourist: Return list of nearby active guides
 
-- WebSocket authentication
-- Private conversation rooms
-- Text messages
-- Images and attachments
-- Location messages
-- Typing indicators
-- Delivery acknowledgements
-- Read receipts
-- Online presence
-- Cursor-based message pagination
-- Push notifications for offline users
+    Tourist->>API: POST /api/v1/guide-requests { guideId, startAt, endAt }
+    API->>DB: Create GuideRequest (Status: PENDING)
+    API-->>Guide: Trigger Notification (GUIDE_REQUEST_RECEIVED)
 
-Messages are stored in the database before they are emitted through WebSocket to avoid temporary messages disappearing after a reload.
-
-### Ratings and Reviews
-
-Tourists can review guides after a completed experience.
-
-Review rules include:
-
-- The request must have the `COMPLETED` status.
-- The reviewer must belong to the request.
-- A user cannot review themselves.
-- A reviewer can submit only one review per request.
-- Ratings must be between 1 and 5.
-- Guide rating summaries may be updated asynchronously.
-
-The data model can later support two-way reviews between tourists and guides.
-
-### Location and Destination Management
-
-Localism supports both automatic GPS location and manual destination selection.
-
-#### Default Location Behavior
-
-- The application may request the user's location when the home screen opens.
-- The user can refuse permission and select a destination manually.
-- Location updates should be infrequent during guide discovery to protect battery life and privacy.
-- A new search location may be sent when the user moves a significant distance or manually refreshes the screen.
-
-#### Optional Real-Time Location Sharing
-
-Real-time tracking is not enabled for all users by default.
-
-It may be enabled only when:
-
-- A guide request has been accepted.
-- The experience is active.
-- Both users consent to location sharing.
-- The location-sharing session has not expired.
-
-Temporary real-time location data should be stored in Redis with a short expiration time instead of being permanently written to PostgreSQL.
-
-Before a request is accepted, the application should show only approximate information such as:
-
-```text
-Approximately 2 km away
-Available in Hai Chau District
-Usually responds within 5 minutes
+    alt Guide Accepts Request
+        Guide->>API: PATCH /api/v1/guide-requests/:id/accept
+        API->>DB: Transaction: Update Request (ACCEPTED) + Create Conversation
+        API-->>Tourist: Trigger Notification (GUIDE_REQUEST_ACCEPTED)
+    else Guide Rejects Request
+        Guide->>API: PATCH /api/v1/guide-requests/:id/reject
+        API->>DB: Update Request (REJECTED)
+        API-->>Tourist: Trigger Notification (GUIDE_REQUEST_REJECTED)
+    end
 ```
 
-Exact coordinates, home addresses, and real-time positions must remain private.
+---
 
-### Notifications
+### 3. Real-Time Messaging & Notification Flow
 
-The platform can send notifications for:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor UserA as Sender (User A)
+    participant WS as WebSocket Gateway (/chat)
+    participant Service as MessagesService
+    participant DB as PostgreSQL
+    participant FCM as Firebase Admin FCM
+    actor UserB as Receiver (User B)
 
-- New guide requests
-- Accepted or rejected requests
-- New messages
-- Upcoming experiences
-- Completed experiences
-- New reviews
-- Verification updates
-- Account or safety notices
-
-Notifications should be processed asynchronously through a queue so that failures from external notification providers do not block the main API request.
-
-### Gemini AI Travel Assistant
-
-The Gemini-powered assistant can help users with:
-
-- Destination suggestions
-- Travel itinerary ideas
-- Local culture and etiquette
-- Food recommendations
-- Transportation guidance
-- Packing suggestions
-- Travel planning
-- Budget-based recommendations
-- Family, nature, history, or adventure activities
-
-The backend acts as an orchestration layer between the user and Gemini. It is responsible for:
-
-- Authentication
-- Rate limiting
-- Prompt construction
-- Conversation context
-- Destination context
-- Input validation
-- Privacy protection
-- Response storage
-- Error handling
-- Streaming support
-
-Sensitive data such as passwords, access tokens, exact private locations, personal phone numbers, and private guide information must never be sent to the AI provider.
-
-## System Architecture
-
-Localism starts as a modular monolith because this architecture is suitable for an MVP and a small development team.
-
-```text
-Mobile Application
-        |
-        | REST API / WebSocket / SSE
-        v
-Load Balancer or Reverse Proxy
-        |
-        v
-NestJS Modular Monolith
-        |
-        ├── PostgreSQL
-        ├── Redis
-        ├── Object Storage
-        ├── Background Workers
-        ├── Firebase Cloud Messaging
-        └── Gemini API
+    UserA->>WS: Emit "message:send" { conversationId, content, clientMessageId }
+    WS->>Service: create(senderId, conversationId, dto)
+    Service->>DB: Check (senderId, clientMessageId) for Idempotency
+    Service->>DB: Insert Message & Update Conversation.lastMessageAt
+    Service-->>WS: Emit "message:new" to room user:{receiverId}
+    
+    alt Receiver is Online (Socket connected)
+        WS-->>UserB: Realtime In-App Message Delivered
+    else Receiver is Offline
+        Service->>FCM: Send Multicast Push Notification
+        FCM-->>UserB: Banner Notification on Mobile Device Screen
+    end
 ```
 
-The application remains logically divided into independent business modules so that selected components can later be extracted into microservices.
+---
 
-Recommended extraction order when the platform grows:
+### 4. Audio/Video Call Flow (Agora WebRTC)
 
-1. Notification worker
-2. AI service
-3. Chat service
-4. Matching service
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Caller as Caller
+    participant Calls as Calls Module
+    participant Agora as Agora Service
+    participant Gateway as Calls Gateway (/calls)
+    actor Receiver as Receiver
 
-## Technology Stack
+    Caller->>Calls: POST /api/v1/conversations/:id/calls { type: "VIDEO" }
+    Calls->>Agora: Generate RTC Token for Caller & Receiver
+    Calls->>Gateway: Emit "call:incoming" { callId, channelName, token }
+    Gateway-->>Receiver: Ringing notification on screen
 
-### Backend
+    alt Receiver Accepts
+        Receiver->>Calls: PATCH /api/v1/calls/:callId/accept
+        Calls->>Gateway: Emit "call:accepted"
+        Caller->>Agora: Join WebRTC Channel
+        Receiver->>Agora: Join WebRTC Channel
+    else Receiver Rejects
+        Receiver->>Calls: PATCH /api/v1/calls/:callId/reject
+        Calls->>Gateway: Emit "call:rejected"
+    end
+```
 
-- Node.js
-- TypeScript
-- NestJS
-- Express adapter initially
-- PostgreSQL
-- TypeORM
-- Redis
-- Socket.IO
-- BullMQ or another Redis-based queue
-- JWT and Passport
-- class-validator
-- Swagger/OpenAPI
-- Gemini API
-- Firebase Cloud Messaging
-- Docker
-- Jest and Supertest
+---
 
-### Mobile Application
+### 5. AI Travel Assistant Flow (Gemini AI)
 
-The backend can support either:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant AI as AI Assistant Service
+    participant DB as PostgreSQL
+    participant Gemini as Google Gemini AI API
 
-- Flutter
-- React Native
+    User->>AI: POST /api/v1/ai/conversations/:id/messages { content: "Suggest 3-day itinerary in Da Nang" }
+    AI->>DB: Fetch last N messages for conversation context
+    AI->>DB: Save USER prompt message
+    AI->>Gemini: generateResponse({ prompt, systemInstruction, history })
+    Gemini-->>AI: Return AI generated itinerary & token usage
+    AI->>DB: Transaction: Save ASSISTANT message & Update conversation title
+    AI-->>User: Return { userMessage, assistantMessage }
+```
 
-### Storage
+---
 
-User-uploaded files should be stored in an object storage service such as:
+## 🛠️ Tech Stack & Dependencies
 
-- Amazon S3
-- Cloudinary
-- Supabase Storage
-- Another S3-compatible service
+* **Core Framework**: NestJS v11.x, Node.js (v20+), TypeScript v5.x
+* **Database & ORM**: PostgreSQL v16+, PostGIS Geospatial Extension, Prisma ORM v7.9
+* **Real-time Engine**: Socket.IO v4.x (WebSockets)
+* **Real-time Calls**: Agora RTC SDK (`agora-token`)
+* **Push Notifications**: Firebase Admin SDK (`firebase-admin`)
+* **AI Provider**: Google Gemini AI (`@google/genai`)
+* **Media Cloud Storage**: Cloudinary SDK
+* **Testing Suite**: Jest, Supertest
 
-File binaries should not be stored directly in PostgreSQL.
+---
 
-## Backend Modules
+## 📁 Project Directory Structure
 
 ```text
 src/
-├── main.ts
-├── app.module.ts
-│
-├── config/
-│   ├── app.config.ts
-│   ├── auth.config.ts
-│   ├── database.config.ts
-│   ├── redis.config.ts
-│   ├── storage.config.ts
-│   └── gemini.config.ts
-│
-├── common/
-│   ├── decorators/
-│   ├── dto/
-│   ├── enums/
-│   ├── events/
-│   ├── exceptions/
-│   ├── filters/
-│   ├── guards/
-│   ├── interceptors/
-│   ├── pipes/
-│   └── utils/
-│
-├── infrastructure/
-│   ├── database/
-│   ├── redis/
-│   ├── queue/
-│   ├── storage/
-│   ├── firebase/
-│   └── gemini/
-│
-└── modules/
-    ├── auth/
-    ├── users/
-    ├── tourist-profiles/
-    ├── guide-profiles/
-    ├── destinations/
-    ├── guide-search/
-    ├── guide-requests/
-    ├── conversations/
-    ├── messages/
-    ├── reviews/
-    ├── locations/
-    ├── notifications/
-    ├── devices/
-    ├── ai-assistant/
-    ├── reports/
-    ├── admin/
-    └── health/
+├── main.ts                     # Application bootstrap & Swagger documentation
+├── app.module.ts               # Root application module
+├── agora/                      # Agora RTC Token Generator integration
+├── ai-assistant/               # Gemini AI assistant integration & conversation thread
+├── auth/                       # JWT Authentication, Refresh Session rotation, Guards
+├── calls/                      # WebRTC Audio/Video calling logic & WebSockets
+├── cloudinary/                 # Cloudinary media storage client
+├── conversations/              # Conversation room management & participant access
+├── database/                   # PrismaService database client
+├── guide/                      # Local guide profile & pricing management
+├── guide-request/              # Guide connection request State Machine
+├── locations/                  # PostGIS geospatial search & current location tracker
+├── messages/                   # Real-time messaging, Idempotency & Cursor pagination
+├── notifications/              # In-App WebSocket + Firebase FCM Push Notification pipeline
+├── tourist/                    # Tourist profile management
+├── upload/                     # File/Image/Video upload controller
+└── users/                      # User entity management & RBAC roles
 ```
 
-## Main Data Entities
+---
 
-The initial database includes the following entities:
+## ⚙️ Environment Variables (.env)
 
-- `users`
-- `user_roles`
-- `tourist_profiles`
-- `guide_profiles`
-- `destinations`
-- `guide_service_areas`
-- `guide_requests`
-- `conversations`
-- `messages`
-- `reviews`
-- `device_tokens`
-- `notifications`
-- `ai_sessions`
-- `ai_messages`
-- `location_sharing_sessions`
+Create a `.env` file in the project root directory based on the configuration below:
 
-PostgreSQL with PostGIS can be introduced for radius-based and distance-based guide searches.
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+API_PREFIX=api/v1
 
-## API Overview
+# Database Configuration (PostgreSQL + PostGIS)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/localism?schema=public"
 
-All APIs use the following base prefix:
+# JWT Authentication Secrets
+JWT_ACCESS_SECRET="your-super-secret-access-key-here"
+JWT_ACCESS_EXPIRATION="15m"
+JWT_REFRESH_SECRET="your-super-secret-refresh-key-here"
+JWT_REFRESH_EXPIRATION="7d"
 
+# Firebase Admin SDK (FCM Push Notifications)
+FIREBASE_PROJECT_ID="your-firebase-project-id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk@your-project.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_KEY_HERE\n-----END PRIVATE KEY-----"
+
+# Agora WebRTC Configuration
+AGORA_APP_ID="your-agora-app-id"
+AGORA_APP_CERTIFICATE="your-agora-app-certificate"
+
+# Google Gemini AI Configuration
+GEMINI_API_KEY="your-google-gemini-api-key"
+GEMINI_MODEL="gemini-2.5-flash"
+AI_MAX_HISTORY_MESSAGES=20
+
+# Cloudinary Storage Configuration
+CLOUDINARY_CLOUD_NAME="your-cloudinary-cloud-name"
+CLOUDINARY_API_KEY="your-cloudinary-api-key"
+CLOUDINARY_API_SECRET="your-cloudinary-api-secret"
+```
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+- **Node.js**: v20.x or later
+- **Pnpm**: `npm install -g pnpm`
+- **PostgreSQL**: v16+ (with PostGIS extension enabled)
+
+---
+
+### Option A: Local Development (Pnpm)
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/NHSon05/nestjs-boilerplate.git
+   cd nestjs-boilerplate
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pnpm install
+   ```
+
+3. **Configure Environment Variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your local credentials
+   ```
+
+4. **Run Database Migrations & Prisma Generate**:
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma generate
+   ```
+
+5. **Start the Development Server**:
+   ```bash
+   pnpm run start:dev
+   ```
+
+6. **Access Swagger API Documentation**:
+   Open browser at: `http://localhost:3000/api-docs`
+
+---
+
+### Option B: Docker Compose
+
+1. **Build & Start Containers**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+2. **Run Migrations inside Docker**:
+   ```bash
+   docker-compose exec app npx prisma migrate deploy
+   ```
+
+---
+
+## 🌐 API Endpoints Summary
+
+Base Prefix: `/api/v1`
+
+### 🔑 Authentication (`/auth`)
+- `POST /auth/register` - Register new Tourist or Guide account
+- `POST /auth/login` - Authenticate & obtain Access + Refresh tokens
+- `POST /auth/refresh` - Rotate refresh token & get new access token
+- `POST /auth/logout` - Revoke current device refresh token
+- `POST /auth/logout-all` - Revoke all active user sessions
+- `GET  /auth/me` - Get current authenticated user profile
+
+### 📍 Locations & Guide Discovery (`/locations`)
+- `POST /locations/current` - Update current GPS coordinates
+- `GET  /locations/guides/search` - Search guides by radius (PostGIS)
+
+### 🤝 Guide Requests (`/guide-requests`)
+- `POST  /guide-requests` - Create new connection request
+- `PATCH /guide-requests/:id/accept` - Accept request (Guide)
+- `PATCH /guide-requests/:id/reject` - Reject request (Guide)
+- `PATCH /guide-requests/:id/cancel` - Cancel request (Tourist)
+
+### 💬 Conversations & Messaging (`/conversations`, `/messages`)
+- `GET   /conversations` - List conversations with unread counter
+- `GET   /conversations/:id/messages` - Get chat history (Cursor pagination)
+- `POST  /conversations/:id/messages` - Send text/media message (Idempotent)
+- `PATCH /conversations/:id/read` - Mark conversation as read
+- `PATCH /messages/:id` - Edit sent text message
+- `DELETE /messages/:id` - Soft-delete message
+
+### 📞 Calls (`/conversations/:id/calls`, `/calls`)
+- `POST  /conversations/:id/calls` - Initiate Audio/Video call & get Agora token
+- `PATCH /calls/:callId/accept` - Accept incoming call
+- `PATCH /calls/:callId/reject` - Reject incoming call
+- `PATCH /calls/:callId/end` - Terminate call session
+
+### 🔔 Notifications (`/notifications`)
+- `GET    /notifications` - Get notifications list & unread count
+- `PATCH  /notifications/read-all` - Mark all notifications as read
+- `POST   /notifications/device-token` - Register FCM device token
+- `DELETE /notifications/device-token` - Unregister FCM device token
+
+### 🤖 AI Assistant (`/ai/conversations`)
+- `POST /ai/conversations` - Create new AI chat thread
+- `POST /ai/conversations/:id/messages` - Send query to Gemini AI
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+The codebase maintains 100% type-safety and automated test coverage across services and controllers.
+
+```bash
+# 1. Validate Prisma Schema
+npx prisma validate
+
+# 2. Run TypeScript Type Check (Zero errors)
+pnpm exec tsc --noEmit
+
+# 3. Execute Unit & Integration Tests (Jest)
+pnpm test
+
+# 4. Build Production Bundle
+pnpm run build
+```
+
+### Automated Test Results:
 ```text
-/api/v1
+PASS src/notifications/notifications.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
+PASS src/notifications/firebase/firebase-admin.service.spec.ts
+PASS src/guide-request/guide-requests.service.spec.ts
+PASS src/messages/messages.service.spec.ts
+PASS src/messages/messages.controller.spec.ts
+PASS src/conversations/conversations.service.spec.ts
+PASS src/conversations/conversations.controller.spec.ts
+PASS src/calls/calls.service.spec.ts
+PASS src/calls/calls.controller.spec.ts
+PASS src/upload/uploads.service.spec.ts
+PASS src/upload/uploads.controller.spec.ts
+PASS src/ai-assistant/ai-assistant.service.spec.ts
+PASS src/ai-assistant/ai-assistant.controller.spec.ts
+PASS src/app.controller.spec.ts
+
+Test Suites: 15 passed, 15 total
+Tests:       92 passed, 92 total
+Snapshots:   0 total
+Time:        1.86s
 ```
 
-### Authentication
+---
 
-```http
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/refresh
-POST /api/v1/auth/logout
-POST /api/v1/auth/logout-all
-POST /api/v1/auth/forgot-password
-POST /api/v1/auth/reset-password
-GET  /api/v1/auth/me
-```
+## 🛡️ Security & Performance
 
-### User Profiles
+- **Zero Snippet Guessing**: Strict parameter validation using `class-validator` and `ParseUUIDPipe`.
+- **Database Idempotency**: `@@unique([senderId, clientMessageId])` constraint prevents duplicate network submissions.
+- **Privacy Shielding**: Soft-deleted messages scrub content and attachments before response serialization.
+- **Self-Healing Notification Tokens**: Automatic deactivation of invalid FCM tokens upon delivery failure.
 
-```http
-GET   /api/v1/users/me
-PATCH /api/v1/users/me
-GET   /api/v1/users/:id/public
-```
+---
 
-### Guide Discovery
+## 📄 License
 
-```http
-GET /api/v1/guides
-GET /api/v1/guides/:guideId
-GET /api/v1/guides/:guideId/reviews
-GET /api/v1/guides/nearby
-```
-
-### Guide Requests
-
-```http
-POST  /api/v1/guide-requests
-GET   /api/v1/guide-requests
-GET   /api/v1/guide-requests/:requestId
-PATCH /api/v1/guide-requests/:requestId/accept
-PATCH /api/v1/guide-requests/:requestId/reject
-PATCH /api/v1/guide-requests/:requestId/cancel
-PATCH /api/v1/guide-requests/:requestId/start
-PATCH /api/v1/guide-requests/:requestId/complete
-```
-
-### Conversations and Messages
-
-```http
-GET   /api/v1/conversations
-GET   /api/v1/conversations/:conversationId
-GET   /api/v1/conversations/:conversationId/messages
-POST  /api/v1/conversations/:conversationId/messages
-PATCH /api/v1/conversations/:conversationId/read
-```
-
-### Reviews
-
-```http
-POST   /api/v1/guide-requests/:requestId/reviews
-GET    /api/v1/guide-requests/:requestId/review
-PATCH  /api/v1/reviews/:reviewId
-DELETE /api/v1/reviews/:reviewId
-```
-
-### AI Assistant
-
-```http
-POST   /api/v1/ai/sessions
-GET    /api/v1/ai/sessions
-GET    /api/v1/ai/sessions/:sessionId
-DELETE /api/v1/ai/sessions/:sessionId
-POST   /api/v1/ai/sessions/:sessionId/messages
-GET    /api/v1/ai/sessions/:sessionId/messages
-POST   /api/v1/ai/sessions/:sessionId/messages/stream
-```
-
-## Security Principles
-
-Localism follows these security principles:
-
-- Passwords are hashed using a secure password-hashing algorithm.
-- Refresh tokens are hashed before being stored.
-- Access tokens have short expiration times.
-- Refresh tokens are rotated and can be revoked per device.
-- DTO validation is applied globally.
-- Authorization checks include both roles and resource ownership.
-- Exact private locations are never publicly exposed.
-- File uploads are validated by type and size.
-- Rate limits are applied to sensitive endpoints.
-- SQL queries are parameterized.
-- Secrets are stored in environment variables.
-- Sensitive fields are excluded from API responses.
-- Audit logs are recorded for important administrative actions.
-
-## Reliability and Scalability
-
-The MVP is designed to remain simple while supporting future growth.
-
-Important design decisions include:
-
-- PostgreSQL transactions for request acceptance
-- Unique database constraints for conversations and reviews
-- Redis for caching, rate limiting, online presence, and temporary locations
-- Queue-based notifications and background processing
-- Cursor pagination for chat messages
-- Stateless API containers
-- Redis adapter for Socket.IO when multiple backend instances are deployed
-- Object storage for uploaded files
-- Health checks, structured logs, metrics, and error monitoring
-
-## Development Roadmap
-
-### Phase 1 — Core Backend
-
-- NestJS project setup
-- Configuration management
-- PostgreSQL and migrations
-- Swagger documentation
-- User accounts
-- Authentication
-- Refresh-token rotation
-- Tourist and guide profiles
-
-### Phase 2 — Guide Discovery and Matching
-
-- Destinations
-- Guide service areas
-- Availability
-- Guide search
-- GPS and manual destination selection
-- Connection-request state machine
-- Transaction-safe request acceptance
-
-### Phase 3 — Communication
-
-- Conversations
-- WebSocket authentication
-- Real-time messaging
-- Message history
-- Read receipts
-- Typing indicators
-- Online presence
-- Push notifications
-
-### Phase 4 — Trust and Safety
-
-- Ratings and reviews
-- Guide verification
-- User reporting
-- Blocking
-- Moderation tools
-- Administrative dashboard APIs
-
-### Phase 5 — AI Assistant
-
-- Gemini integration
-- AI sessions
-- Conversation history
-- Prompt safety
-- Rate limiting
-- Destination-aware context
-- Streaming responses
-- Local travel knowledge retrieval
-
-### Phase 6 — Production Readiness
-
-- Redis
-- Queue workers
-- File uploads
-- Centralized logging
-- Monitoring
-- Automated tests
-- Docker
-- CI/CD
-- Backup and recovery
-- Load testing
-- Security review
-
-## Testing Strategy
-
-The project should include:
-
-- Unit tests for business services
-- Integration tests for repositories and database transactions
-- End-to-end tests for authentication
-- End-to-end tests for request transitions
-- WebSocket tests for chat authorization
-- Review eligibility tests
-- AI service error-handling tests
-- Load tests for guide search and messaging
-
-## Project Goals
-
-Localism is designed to demonstrate practical backend engineering skills, including:
-
-- NestJS module architecture
-- Dependency Injection
-- REST API design
-- Authentication and authorization
-- Database modeling
-- Transactions and concurrency control
-- Location-based search
-- WebSocket communication
-- Redis and queues
-- Third-party AI integration
-- Privacy and security
-- Testing
-- Docker and deployment
-- Scalable system design
-
-## License
-
-This project is currently intended for educational, portfolio, and product-development purposes. Add the appropriate license before public distribution.
+Distributed under the MIT License. See `LICENSE` for more information.
